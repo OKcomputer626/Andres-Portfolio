@@ -1,0 +1,4 @@
+- source: project
+  netlify:
+    - id: cc787185-6277-4fad-9d47-f7a051e66727
+      url: 'https://andresgonzalezstats.com'
