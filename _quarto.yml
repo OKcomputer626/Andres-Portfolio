@@ -1,19 +1,87 @@
+authorname: "Andres Gonzalez"
+draft: false
+
 project:
   type: website
 
+  preview: 
+    port: 3751
+    browser: true
+    watch-inputs: true
+    navigate: true
+
+title-meta: "Andres Gonzalez"
+description-meta: "Data Scientist & Statistician | Master's in Applied Statistics | Specializing in Bayesian Methods, Sports Analytics, and Crime Analytics"
+
 website:
-  title: "Andres Portfolio"
+  title: "Andres Gonzalez"
+  description: "Data Scientist & Statistician | Master's in Applied Statistics | Specializing in Bayesian Methods, Sports Analytics, and Crime Analytics"
+  site-url: https://www.andresgonzalezstats.com
+  image: img/Andres_Gonzalez.png
+  
+  repo-url: "https://github.com/OKcomputer626/Andres-Portfolio"
+  repo-branch: main
+  
+  search: 
+    location: navbar
+    type: textbox
+  
   navbar:
+    pinned: true
+    logo: /img/data.png
     left:
-      - href: index.qmd
-        text: Home
-      - about.qmd
+      - text: Blog
+        href: blog/index.qmd
+      - text: Visualization
+        href: visualization/index.qmd
+      - text: Resume
+        href: resume/index.qmd
+      - text: Spotify
+        href: Spotify/index.qmd
+    right:
+      - icon: twitter-x
+        href: https://twitter.com/AndresAnalytics
+      - icon: github
+        href: https://github.com/OKcomputer626
+      - icon: linkedin
+        href: https://linkedin.com/in/andresgonzalez26
+      - icon: envelope
+        aria-label: email
+        href: "mailto:gonzalez.andrespsg@gmail.com"
+  
+  favicon: img/favicon.ico
+  
+  twitter-card: 
+    creator: "@AndresAnalytics"
+    image: "/img/Andres_Gonzalez.png"
+    
+  open-graph: 
+    image: "/img/Andres_Gonzalez.png"
+    locale: en_US
+  
+  page-footer: 
+    left: |
+      <span class="faux-block">{{< fa brands creative-commons >}} 2024 Andres Gonzalez</span>
+      <span class="faux-block"><a href="https://github.com/OKcomputer626/Andres-Portfolio">{{< fa brands github >}} Source Code</a></span>
+    right: |
+      <span class="faux-block"> Built with <a href="https://quarto.org/">Quarto</a></span>
+  
+execute:
+  freeze: true
+  
+filters:
+  - html/newpagelink.lua
 
 format:
   html:
-    theme: cosmo
-    css: styles.css
-    toc: true
-
-editor: visual
-
+    include-in-header: html/seo.html
+    fontsize: 1.1em
+    theme: 
+      - flatly
+      - html/styles.scss
+    toc: false
+    anchor-sections: true
+    fig-cap-location: margin
+    reference-location: margin
+    footnotes-hover: true
+    highlight-style: monokai
