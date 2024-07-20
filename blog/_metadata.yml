@@ -1,0 +1,49 @@
+# options specified here will apply to all posts in this folder
+
+# freeze computational output
+# (see https://quarto.org/docs/projects/code-execution.html#freeze)
+freeze: true
+description-meta: "{{< meta description >}}"
+
+# Enable banner style title blocks
+title-block-banner: "../img/banner.jpg"
+
+include-in-header:
+  - text: |
+      <style>
+      .quarto-title-block .quarto-title-banner {
+        background-position-y: 45%;
+      }
+      </style>
+
+# Default for table of contents
+toc: true
+toc-title: Contents
+toc-location: left
+
+# Default knitr options
+execute:
+  echo: true
+  message: true
+  warning: true
+  
+format:   
+  html:
+    code-tools: true
+    comments:
+      giscus:
+        repo: "https://github.com/OKcomputer626/Andres-Portfolio"
+        category: Announcements
+        loading: lazy
+        input-position: bottom
+        language: en
+    quarto-template-params:
+      banner-header-class: "blog-post"
+    include-after-body: ../html/blog_footer.html
+    
+# Default author
+author:
+  - name: Andres Gonzalez
+    url: https://www.andresgonzalezstats.com
+    degrees:
+    - MSc
