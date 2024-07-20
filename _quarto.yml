@@ -58,6 +58,10 @@ website:
   open-graph: 
     image: "/img/Andres_Gonzalez.png"
     locale: en_US
+    
+  google-analytics: 
+    tracking-id: G-MDSNGGTV5L
+    storage: none
   
   page-footer: 
     left: |
