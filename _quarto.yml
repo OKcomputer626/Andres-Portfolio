@@ -60,7 +60,7 @@ website:
     locale: en_US
     
   google-analytics: 
-    tracking-id: G-MDSNGGTV5L
+    tracking-id: "G-MDSNGGTV5L"
     storage: none
   
   page-footer: 

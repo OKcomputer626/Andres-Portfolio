@@ -32,7 +32,7 @@ format:
     code-tools: true
     comments:
       giscus:
-        repo: "https://github.com/OKcomputer626/Andres-Portfolio"
+        repo: OKcomputer626/Andres-Portfolio
         category: Announcements
         loading: lazy
         input-position: bottom

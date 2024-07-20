@@ -1,7 +1,7 @@
 ---
 title: "Predicting Football Match Outcomes Using Bayesian Poisson-Gamma Distribution"
 lightbox: true
-date: last-modified
+date: July 20, 2024
 categories: 
   - R
   - Bayesian 
@@ -15,7 +15,6 @@ format:
     fig-cap-location: bottom
     include-before-body: ../../html/margin_image.html
     include-after-body: ../../html/blog_footer.html
-    comments: false
 editor: 
   markdown: 
     wrap: sentence
