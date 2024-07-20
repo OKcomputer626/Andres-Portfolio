@@ -16,11 +16,11 @@ description-meta: "Data Scientist & Statistician | Master's in Applied Statistic
 website:
   title: "Andres Gonzalez"
   description: "Data Scientist & Statistician | Master's in Applied Statistics | Specializing in Bayesian Methods, Sports Analytics, and Crime Analytics"
-  site-url: https://www.andresgonzalezstats.com
+  site-url: https://andresgonzalezstats.com/
   image: img/Andres_Gonzalez.png
   
   repo-url: "https://github.com/OKcomputer626/Andres-Portfolio"
-  repo-branch: main
+  repo-branch: master
   
   search: 
     location: navbar
@@ -59,9 +59,7 @@ website:
     image: "/img/Andres_Gonzalez.png"
     locale: en_US
     
-  google-analytics: 
-    tracking-id: "G-MDSNGGTV5L"
-    storage: none
+  google-analytics: "G-MDSNGGTV5L"
   
   page-footer: 
     left: |
