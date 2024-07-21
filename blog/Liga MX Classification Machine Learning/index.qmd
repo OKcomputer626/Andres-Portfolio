@@ -1,0 +1,734 @@
+---
+title: "Machine Learning Classification of Center-Back Player Types in Liga MX"
+lightbox: true
+description: "Explore the similarities among center-back players in Liga MX using various machine learning and clustering methods including PCA, K-means (non-hierarchical), and Agglomerative Hierarchical Clustering"
+date: "March 3, 2024"
+categories: 
+  - R
+  - Classification 
+  - Machine Learning
+  - Football
+image: liga mx.jpg
+draft: false
+number-sections: false
+format:
+  html:
+    fig-cap-location: bottom
+    include-before-body: ../../html/margin_image.html
+    include-after-body: ../../html/blog_footer.html
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+## Introduction
+
+Fútbol has been an integral part of my journey from the first time I stepped onto the field.
+The thrill of playing as a left winger, the strategy behind every move, and the joy of scoring have deeply influenced my understanding and love for the sport.
+This passion has seamlessly intertwined with my growing interest in analytics, leading me to explore the untapped potential of data in revealing hidden aspects of the game, such as player dynamics, strategic patterns, and performance metrics.
+
+Liga MX is more than just a league to me; it's a big part of Mexican culture.
+The Apertura and Clausura tournaments show the excitement and spirit of Mexican soccer, bringing stories of victory and defeat that engage fans every year.
+
+In this study, I'll concentrate on the key players in defense: the center-backs.
+Their role, often overshadowed by the flamboyance of attackers, is crucial in orchestrating the team's defensive harmony.
+Leveraging unsupervised machine learning techniques such as Principal Component Analysis (PCA), K-means clustering, and Hierarchical Clustering, I aim to dissect and categorize the playing styles of these pivotal figures.
+Each technique serves a purpose: PCA to reduce dimensionality and highlight important performance indicators, K-means to group similar player profiles based on these indicators, and Hierarchical Clustering to build a detailed taxonomy of player types based on their on-field behavior.
+
+This study is more than just research; it's an exploration into Liga MX using data analytics.
+By applying these unsupervised learning methods, we will uncover the nuanced contributions of center-backs, offering new insights and appreciation for their role in the beautiful game.
+Join me in this analytical journey, where numbers meet the pitch, and discover the unseen stories of Liga MX's defensive performances.
+
+```{r}
+#| include: false
+
+# load libraries
+library(tidyverse)
+library(worldfootballR)
+library(factoextra)
+library(showtext)
+library(patchwork)
+library(gt)
+```
+
+```{r}
+#| eval: false
+#| include: false
+
+match_urls <- fb_match_results(country = "MEX", gender = "M", season_end_year = 2024) 
+
+match_urls
+```
+
+```{r}
+#| eval: false
+#| include: false
+
+all_match_urls <- match_urls %>% 
+  filter(Round %in% "Clausura 2024 Regular Season") %>%
+  drop_na(HomeGoals) %>%
+  pull(MatchURL)
+
+df <- fb_advanced_match_stats(match_url = all_match_urls, stat_type = "defense", team_or_player = "player")
+
+write_csv(df, file = "Clausura 2024 Regular Season.csv")
+```
+
+## Data
+
+For this research, I utilized a package tool called `worldfootballr`, which is designed to pull global football (soccer) data from platforms like FBref, Transfermarkt, Understat, and FotMob.
+This tool helped me gather advanced statistics provided by Opta, which were then formatted into a CSV file capturing player performances throughout the Clausura 2024 regular season.
+Initially, the dataset comprised 2,428 entries across 47 different columns.
+In the process of refining this dataset, I removed information irrelevant to our specific analysis.
+This process also involved using a histogram shown in @fig-distribution of each player's total minutes to distinguish those who had accumulated at least 120 minutes of playtime from the start of the season until matchday 9.
+
+```{r}
+#| include: false
+
+df <- read_csv("data/Clausura 2024 Regular Season.csv") # read file
+```
+
+```{r}
+#| include: false
+
+# Count occurrences of each player in each position
+position_counts <- df %>%
+  group_by(Player, Team, Pos) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+# Identify the primary position for each player
+primary_positions <- position_counts %>%
+  arrange(desc(Count)) %>%
+  group_by(Player, Team) %>%
+  slice(1) %>%
+  ungroup()
+
+# Map each player to their primary position in the original data frame
+df <- df %>%
+  left_join(primary_positions, by = c("Player","Team"), suffix = c("", "_primary"))
+
+df
+```
+
+```{r}
+#| include: false
+
+df_cb <- df %>%
+  filter(grepl("CB", Pos_primary))
+
+df_cb <- df_cb %>%
+  group_by(Player, Team) %>%
+  summarise(round(across(Tkl_Tackles:Err, mean), 2),
+            Total_Min = sum(Min)) %>%
+  ungroup()
+
+sum(duplicated(df_cb$Player))
+```
+
+```{r}
+#| echo: false
+#| label: fig-distribution
+#| fig-cap: "Distribution of Total Minutes Played"
+
+font_add_google(family = "Roboto", "Roboto Condensed")
+
+showtext_auto()
+
+theme_good <- theme_bw(base_family = "Roboto") +
+  theme(axis.title = element_text(face='bold', size = 20), # make all axis titles bold
+        axis.text.x = element_text(size = 16),
+        plot.title = element_text(face='bold', hjust=0.5, size = 22), # make all plot titles bold
+        legend.title = element_text(face='bold'), # make all legend titles bold
+        plot.subtitle = element_text(face='italic', hjust=0.5)) # make all subtitles italic
+
+theme_set(theme_good)
+
+df_cb %>%
+  ggplot(aes(x = Total_Min)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, color = "#35374B", fill = "#344955", alpha = 0.9) +
+  geom_density(color = "#78A083", fill = "#78A083", alpha = 0.4) +
+  labs(
+    x = "Total Minutes Played",
+    y = "Density"
+  ) +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+```
+
+After these adjustments, the final dataset presented 57 unique center-back players alongside 15 variable features.
+Each record within this dataset corresponds to an individual player, encompassing important performance data from the season, such as the number of tackles made, tackles within the defensive third, and instances of lost challenges.
+Below in @tbl-data are the first 6 observations:
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: tbl-data
+#| tbl-cap: "Clean Dataset"
+
+player_names <- df_cb %>%
+  filter(Total_Min > 120) %>%
+  pull(Player)
+
+team_names <- df_cb %>%
+  filter(Total_Min > 120) %>%
+  pull(Team)
+
+total_min <- df_cb %>%
+  filter(Total_Min > 120) %>%
+  pull(Total_Min)
+
+clean_df <- df_cb %>%
+  filter(Total_Min > 120) %>%
+  select(!c(Player, Team, Total_Min)) %>%
+  select_if(~ !any(is.na(.)))
+  
+row.names(clean_df) <- player_names
+
+head(clean_df) %>%
+  knitr::kable(digits = 2)
+```
+
+```{r}
+#| include: false
+
+names <- clean_df %>%
+  colnames()
+
+variable_names <- tibble(
+  variables = names,
+  description = c("Number of players tackled", "Tackles in which the tackler's team won possession of the ball", "Tackles in defensive 1/3", "Tackles in middle 1/3", "Tackles in attacking 1/3", "Number of dribblers tackled", "Number of unsuccessful challenges plus number of dribblers tackled", "Number of unsucessful attempts to challenge a dribbling player", "Number of times blocking the ball by standing in its path", "Number of times blocking a shot by standing in its path", "Number of times blocking a pass by standing in its path", "Interceptions", "Number of players tackled plus number of interceptions", "Clearances", "Mistakes leading to an opponent's shot")
+)
+```
+
+Below in @tbl-variables are the description of each variable used for the analysis:
+
+```{r}
+#| echo: false
+#| label: tbl-variables
+#| tbl-cap: "Summary of Variables in Dataset"
+
+variable_names %>%
+  gt() %>%
+  cols_label(variables = md("**Variables**"),
+             description = md("**Description**"))
+```
+
+## Principal Component Analysis (PCA)
+
+Principal component analysis aims to describe the variance-covariance relationship among a group of variables by using a small number of linear combinations of these variables.
+The primary goals are to reduce the dimensionality of the data and to provide an interpretation through the rotation process.
+
+Algebraically, principal components are unique linear combinations of the p random variables $X_1,X_2,\ldots,X_p$.
+Geometrically, this translates to forming a new set of axes through the rotation of the original coordinate system, where $X_1,X_2,\ldots,X_p$ are the axes.
+These newly established axes stand for the most significant variation directions, simplifying and condensing the description of the covariance matrix.
+
+Let the random vector $X' = [X_1,X_2,\dots,X_p]$ have the covariance matrix $\Sigma$ with eigenvalues $\lambda_1 \geq \lambda_2 \geq \ldots \geq \lambda_p = 0$.
+
+Consider the linear combinations \begin{align*}
+Y_1 &= \boldsymbol{a'_1X} =  a_{11}X_1 + a_{12}X_2 +\ldots+ a_{1p}X_p \\
+Y_2 &= \boldsymbol{a'_2X} =  a_{21}X_1 + a_{22}X_2 +\ldots+ a_{2p}X_p \\
+&\vdots\\
+Y_p &= \boldsymbol{a'_pX} =  a_{p1}X_1 + a_{p2}X_2 +\ldots+ a_{pp}X_p
+\end{align*}
+
+Then, we obtain \begin{align*}
+\text{Var}(Y_i) &= \boldsymbol{a'_i\Sigma a_i} \qquad &i = 1,2,...,p \\
+\text{Cov}(Y_i,Y_k) &= \boldsymbol{a'_i\Sigma a_k} \qquad &i,k = 1,2,\ldots,p
+\end{align*}
+
+The principal components are distinct linear combinations formed from the original variables, designed to be independent of each other.
+
+The first principal component is the linear combination with maximum variance.
+That is, it maximizes $\text{Var}(Y_1) = \boldsymbol{a'_i\Sigma a_i}$.
+It is clear that $\text{Var}(Y_1) = \boldsymbol{a'_i\Sigma a_i}$ can be increased by multiplying any $\boldsymbol{a_1}$ by some constant.
+To eliminate this indeterminacy, it is convenient to restrict attention to coefficient vectors of unit length.
+We therefore define
+
+```{=tex}
+\begin{align*}
+\text{First principal component} =\ &\text{linear combination}\ \boldsymbol{a'_1X}\ \text{that maximizes} \\ 
+&\text{Var}(\boldsymbol{a'_1X})\ \text{subject to a}\ \boldsymbol{a'_1a_1} = 1
+\end{align*}
+```
+```{=tex}
+\begin{align*}
+\text{Second principal component} =\ &\text{linear combination}\ \boldsymbol{a'_2X}\ \text{that maximizes} \\ 
+&\text{Var}(\boldsymbol{a'_2X})\ \text{subject to a}\ \boldsymbol{a'_2a_2} = 1\ \text{and} \\
+&\text{Cov}(\boldsymbol{a'_1X,a'_2X}) = 0
+\end{align*}
+```
+At the $i$th step, \begin{align*}
+i\text{th principal component} =\ &\text{linear combination}\ \boldsymbol{a'_iX}\ \text{that maximizes} \\ 
+&\text{Var}(\boldsymbol{a'_iX})\ \text{subject to a}\ \boldsymbol{a'_ia_i} = 1\ \text{and} \\
+&\text{Cov}(\boldsymbol{a'_iX,a'_kX}) = 0\ \text{for}\ k < i
+\end{align*}
+
+Initially, the data is scaled to normalize the scale of each variable.
+This ensures that all variables contribute equally to the analysis.
+This standardization process is crucial and is mathematically represented as,
+
+```{=tex}
+\begin{align*}
+Z_1 &= \frac{(X_1 - \mu_1)}{\sqrt{\sigma_{11}}} \\
+Z_2 &= \frac{(X_2 - \mu_2)}{\sqrt{\sigma_{22}}} \\
+&\vdots\\
+Z_p &= \frac{(X_p - \mu_p)}{\sqrt{\sigma_{pp}}}
+\end{align*}
+```
+In matrix form, \begin{align*}
+\boldsymbol{Z} = (\boldsymbol{V}^{1/2})^{-1}(\boldsymbol{X} - \boldsymbol{\mu})
+\end{align*}
+
+where the diagonal standard deviation matrix is $\boldsymbol{V}^{1/2}$.
+
+After standardizing the data, we compute its covariance matrix to examine the relationships among the variables, which is mathematically represented as:
+
+```{=tex}
+\begin{align*}
+\text{Cov}(\boldsymbol{Z}) = (\boldsymbol{V}^{1/2})^{-1}\boldsymbol{\Sigma}(\boldsymbol{V}^{1/2})^{-1} = \boldsymbol{\rho}
+\end{align*}
+```
+In this formula, $\boldsymbol{\rho}$ denotes the correlation matrix of the original variables $\boldsymbol{X}$, after transformation into the standardized form $\boldsymbol{Z}$.
+This step is crucial for understanding how variables relate to one another in the scaled space.
+Following this, we determine the eigenvalues and eigenvectors from this correlation matrix, $\boldsymbol{\rho}$.
+The eigenvalues quantify the amount of variance each principal component captures, while the eigenvectors specify the directional orientation of these components, providing insight into the underlying structure of the data.
+
+The standardized data is shown below in @tbl-scaled:
+
+```{r}
+#| echo: false
+#| label: tbl-scaled
+#| tbl-cap: "Standardized Dataset"
+
+scaled_df <- scale(clean_df)
+
+head(scaled_df) %>%
+  knitr::kable(digits = 2)
+```
+
+In our analysis, we specifically focus on the loadings of the first two principal components.
+These loadings reflect how each original variable contributes to the formation of the principal components.
+By analyzing the loadings of the first two components, we gain insights into the most significant patterns and variations within the data.
+
+The mathematical approach of the $i$th principal component of the standardized variables $\boldsymbol{Z}' = [Z_1,Z_2,\ldots,Z_p]$ with $\text{Cov}(\boldsymbol{Z}) = \boldsymbol{\rho}$ is represented as:
+
+```{=tex}
+\begin{align*}
+\boldsymbol{Y_i}' = \boldsymbol{{e_i{Z}}} = \boldsymbol{e'_{i}}(\boldsymbol{V}^{1/2})^{-1}(\boldsymbol{X}-\boldsymbol{\mu}), \qquad i = 1,2,\ldots,p
+\end{align*}
+```
+The loadings for the first and second principal components, denoted as PC1 and PC2 respectively, are presented below in @tbl-loadings:
+
+```{r}
+#| code-fold: true
+#| label: tbl-loadings
+#| tbl-cap: "Variable PCA Loadings: PC1 and PC2 Analysis"
+
+cov_df <- cov(scaled_df)
+eigen_df <- eigen(cov_df)
+
+phi <- eigen_df$vectors[,1:2]
+
+row.names(phi) <- colnames(clean_df)
+colnames(phi) <- c("PC 1", "PC 2")
+
+phi %>%
+  knitr::kable(digits = 2)
+```
+
+The total variance for the standardized variables in the population is equal to $p$, which represents the sum of the diagonal elements of the matrix, also known as the trace of the correlation matrix $\boldsymbol{\rho}$.
+Consequently, the fraction of the total variance accounted for by the $k$th principal component of $\boldsymbol{Z}$ is determined as follows:
+
+$$
+\begin{pmatrix}
+\text{Proportion of (standardized)}\\
+\text{population variance due}\\
+\text{to}\ k\text{th principal component}
+\end{pmatrix} = \frac{\lambda_k}{p}, \qquad k = 1,2,\ldots,p
+$$ where the $\lambda_k's$ are the eigenvalues of $\boldsymbol{\rho}$.
+
+The Proportion of Variance for each Principal Component (PC) is presented below in @tbl-prop_var:
+
+```{r}
+#| code-fold: true
+#| label: tbl-prop_var
+#| tbl-cap: "Proportion of Variance"
+
+sum_cov <- sum(diag(cov(scaled_df)))
+results <- eigen_df$values/sum_cov 
+
+prop_var <- tibble(
+  principal_components = paste0("PC ", 1:15),
+  results = results
+)
+
+prop_var %>%
+  gt() %>%
+  cols_label(
+    principal_components = md("**Principal Components**"),
+    results = md("**Results**")
+  ) %>%
+  fmt_number(
+    columns = results,
+    decimals = 2
+  ) %>%
+  opt_table_font(
+    google_font(name = "Roboto")
+  ) %>%
+  tab_options(data_row.padding = px(1))
+```
+
+Now, the proportion of total variance explained by the first and second principal components is calculated as the sum of the first eigenvalue divided by the total variance plus the second eigenvalue divided by the total variance, represented as:
+
+```{=tex}
+\begin{align*}
+(\frac{\lambda_{1} + \lambda_{2}}{p})100\% = (\frac{6.376 + 1.960}{15})100\% = 55.6\%
+\end{align*}
+```
+of the total (standardized) variance, have interesting interpretations.
+
+```{r}
+#| code-fold: true
+
+total_prop_var <- (eigen_df$values[1] + eigen_df$values[2]) / sum_cov
+
+print(paste0("Total variance explained by PC1 and PC2: ", round(total_prop_var, 4) * 100, "%"))
+```
+
+The PCA scores for each player, as shown below in @tbl-scores, represent the coordinates of each player in the space defined by the first two principal components (PC1 and PC2).
+These scores are calculated based on the original data transformed by the respective principal component loadings.
+
+```{r}
+#| echo: false
+#| label: tbl-scores
+#| tbl-cap: "Player PCA Scores: PC1 and PC2 Analysis"
+
+PC1 <- as.matrix(scaled_df) %*% phi[,1]
+PC2 <- as.matrix(scaled_df) %*% phi[,2]
+
+PC <- tibble(Player = player_names, Team = team_names, PC1, PC2)
+
+head(PC) %>%
+  gt() %>%
+  fmt_number(decimals = 2) %>%
+  opt_table_font(
+    google_font(name = "Roboto")
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels()
+  )
+```
+
+##### Scores For Each Player
+
+```{r}
+#| echo: false
+#| label: fig-plot
+#| fig-cap: "Individuals - PCA"
+
+PC %>%
+  ggplot(aes(x = PC1, y = PC2, label = Player)) +
+  geom_point(color = "#3772ff", size = 2.5) +
+  ggrepel::geom_text_repel(color = "#080708", size = 6)
+
+```
+
+@fig-plot indicates the presence of two outliers, specifically players Guido Pizarro from Tigres UANL and Andres Micolta Arroyo from CF Pachuca.
+We will examine the impact of these outliers on the clustering process in subsequent steps.
+
+::: callout-tip
+## Principal Component Analysis with `prcomp` Function
+
+R offers an easy method for data analysis with its builtin `prcomp` function, used for Principal Component Analysis.
+If you set `scale = TRUE`, it standardizes the data automatically.
+This function provides principal components and their impact on variance.
+The summary given by the function shows detailed variance information for each component, making it easier to understand and reduce complex data.
+:::
+
+```{r}
+#| code-fold: true
+
+pca_df <- prcomp(clean_df, scale = TRUE)
+
+summary(pca_df)
+```
+
+The summary indicates that the initial principal components, particularly PC1 and PC2, play significant roles in capturing the dataset's variance, with PC1 alone accounting for 42.51% and PC2 adding another 13.07%.
+This showcases their importance in representing the dataset's structure.
+As more components are added, the cumulative variance explained increases, reaching virtually 100% by PC12, which suggests that the components beyond this point have minimal impact on explaining additional variance.
+That means that when $\rho$ is near 1, the last $\rho - 1$ components collectively contribute very little to the total variance and can often be neglected.
+Therefore, focusing on the first few components is essential for effective dimensionality reduction and dataset interpretation, while the latter components can generally be omitted from further analysis.
+
+```{r}
+#| echo: false
+#| label: fig-screeplot
+#| fig-cap: "Scree Plot"
+
+fviz_eig(pca_df, addlabels = FALSE, ggtheme = theme_good) +
+  geom_text(label = paste0(round(pca_df$sdev^2/sum(pca_df$sdev^2)*100,2)[1:10],"%"), 
+            vjust=-0.6, hjust = 0.3, family="Roboto", size = 6) +
+  labs(title = NULL)
+```
+
+The *scree plot* in @fig-screeplot above is a useful visual aid to determining an appropriate number of principal components.
+The first principal component explain 42.51% of the total variance.
+The first two principal components, collectively, explain 55.58% of the total variance.
+An elbow occurs at about $i = 3$.
+That is, the eigenvalues after $\lambda_2$ are all relatively small and about the same size.
+In this case, it appears, without any other evidence, that two sample principal components effectively summarize the total variance of the data.
+
+##### Contributions of variables to PCs
+
+The key variables, which contribute most significantly, can be emphasized in the correlation plot as follows:
+
+```{r}
+#| echo: false
+#| label: fig-variables
+#| fig-cap: "Variables - PCA"
+
+fviz_pca_var(pca_df, col.var="contrib",
+             gradient.cols = c("#002642", "#840032", "#e59500"),
+             repel = TRUE,
+             labelsize = 6,
+             ggtheme = theme_good
+             ) +
+  labs(title = NULL) +
+  theme(
+    legend.title = element_text(size = 20),
+    legend.text = element_text(size = 17)
+  )
+```
+
+All the variables grouped together @fig-variables, such as `Tkl+Int`, `Def_3rd_Tackles`, `Tkl_Tackles`, `Att_3rd_Tackles`, `TklW_Tackles`, `Tkl_Challenges`, `Mid_3rd_Tackles`, `Att_Challenges`, and `Lost_Challenges` are positively correlated with each other.
+This positive correlation is due to their proximity to each other and their downward direction.
+Conversely, `Sh_Blocks`, `Blocks_Blocks`, and `Clr` are grouped together and show a positive correlation, as their vectors point upwards.
+This indicates that these two sets of variables move in opposite directions, meaning they are negatively correlated.
+Negatively correlated variables are positioned on opposite sides of the plot's origin, in opposed quadrants.
+The distance between variables and the origin measures how well the variables are represented on the factor map; those further from the origin are better represented.
+
+```{r}
+#| echo: false
+
+# Contributions of variables to PC1
+dim1 <- fviz_contrib(pca_df, choice = "var", axes = 1,
+             ggtheme = theme_good)
+
+# Contributions of variables to PC2
+dim2 <- fviz_contrib(pca_df, choice = "var", axes = 2,
+             ggtheme = theme_good)
+
+dim1 + dim2
+```
+
+This bar plot displays the contributions of various variables to PC1 (dim1) on the left and to PC2 (dim2) on the right.
+The red dashed line across the graph represents the expected average contribution for each dimension.
+
+##### Biplot
+
+In the biplot, individual player scores are plotted alongside variables, allowing for a comprehensive visual representation of their performances in relation to the different measured factors.
+
+```{r}
+#| echo: false
+#| label: fig-varscores
+#| fig-cap: "Contributions of Individual Scores and Variables to PCs"
+
+fviz_pca_biplot(pca_df,
+                labelsize = 5,
+                col.var = "#0066b2", # Variables color
+                col.ind = "#696969", # Individuals color
+                repel = TRUE,
+                title = NULL,
+                ggtheme = theme_good
+                )
+```
+
+In this biplot analysis plot from @fig-varscores, it's crucial to understand that a player's position relative to a specific variable indicates their performance in that area.
+Players on the same side as a variable typically exhibit high values for that trait, while those on the opposite side represent lower values.
+For instance, several players located in the third quadrant, where most Dim1 contributing variables are present, demonstrate significant defensive actions.
+Sebastian Olmedo from Club Puebla, notable for his high Dim1 representation, exemplifies a player actively involved in defense.
+Similarly, players like Arturo Ortiz, who are positioned close to Olmedo, share these defensive characteristics, forming a group identified as traditional old-school defenders.
+
+Conversely, in the second quadrant, opposite the traditional defenders, we find variables negatively correlated with defensive actions, such as `Blocks_Blocks`, `Sh_Blocks`, and `Clr`.
+Santiago Nunez of Santos Laguna stands out here as a "stopper," excelling in blocking, indicative of a different defensive skill set.
+
+Additionally, outliers like Andres Micolta Arroyo from C.F.
+Pachuca and Guido Pizarro from Tigres UANL are positioned apart from clusters, suggesting unique styles of play that, while distinct, significantly impact the game by contributing to key variables.
+
+Lastly, there's a distinct group known as `Att.3rd_tackles` players, including Diego de Buen from Club Puebla and Ventura Alvarado from Mazatlan F.C. These individuals specialize in stopping counter-attacks and play a crucial role during 'el balón parado' situations, as they call it in Spanish, which refers to set pieces or moments when the ball is stationary.
+Their positioning in the biplot underscores their expertise in initiating defensive maneuvers during these pivotal moments of the game.
+
+## Non-Hierarchical Clustering
+
+### K-Means Clustering
+
+Following the PCA analysis, we will now proceed with K-means clustering to further explore our dataset.
+This method will allow us to categorize the data into distinct groups based on similarities identified during the PCA.
+By applying K-means clustering, we aim to enhance our understanding of the underlying structures and relationships within the data, facilitating more targeted interpretations and insights.
+This step is crucial in identifying natural groupings among players or variables, leading to more nuanced conclusions and strategic decisions.
+
+**A Focus on Euclidean Distance:** An essential step in K-means clustering involves discussing the dissimilarity or distance measurement within the data.
+In our analysis, we opt for the Euclidean distance, which is the standard method for K-means and measures the straight-line distance between points in multidimensional space.
+This choice is due to its simplicity and effectiveness in quantifying the dissimilarity between data points.
+By utilizing Euclidean distance, we can ensure that the clusters formed are based on the actual spatial differences among data points, making it a suitable and intuitive approach for our clustering objectives.
+
+The Euclidean distance between two p-dimensional points is given by the formula:
+
+$$
+d(x, y) = \sqrt{(x_1 - y_1)^2 + (x_2 - y_2)^2 + \cdots + (x_p - y_p)^2} = \sqrt{(x - y)'(x - y)}
+$$
+
+**K-Means Clustering:** the process is composed of these three steps:
+
+1.  Partition the items into $K$ initial clusters.
+
+2.  Proceed through the list of items, assigning an item to the cluster whose centroid (mean) is nearest.
+    (Distance is usually computed using Euclidean distance with either standardized or standardized.) Recalculate the centroid for the cluster receiving the new item and for the cluster losing the item.
+
+3.  Repeat Step 2 until no more reassignments take place.
+    In practice, such as in R, this process might begin with a default of 10 iterations to ensure stability and convergence of clusters.
+
+To determine the **optimal number of clusters (k)** in our analysis, we employed two methods: the Within-Sum-of-Squares (WSS) and the Gap Statistic.
+The WSS method helps identify the elbow point where the addition of another cluster does not significantly improve the total variance within clusters.
+Meanwhile, the Gap Statistic compares the log-wss of our dataset against expected values under a null reference distribution of the data, providing a more robust estimation of the optimal k.
+
+```{r}
+#| echo: false
+#| label: fig-optimal
+#| fig-cap: "Optimal Number of Clusters"
+
+wss <- fviz_nbclust(scaled_df, kmeans, method = "wss") +
+  labs(title = NULL) +
+  theme_good
+
+gap_stat <- fviz_nbclust(scaled_df, kmeans, method = "gap_stat") +
+  labs(
+    title = NULL) +
+  theme_good
+
+wss + gap_stat
+```
+
+Based on the analysis plot from @fig-optimal of the Total Within Sum of Square and the Gap Statistic plots, the optimal number of clusters for the data is recommended to be three.
+The Elbow Method suggests a bend at three or four clusters, while the Gap Statistic clearly peaks and maximizes at three clusters, indicating the most suitable partitioning of the data.
+
+After identifying the optimal number of clusters as three through both the Elbow Method and the Gap Statistic, we proceed with the segmentation of the dataset to uncover distinct groupings and patterns.
+This allows us to visualize and analyze the inherent structures and relationships within our data.
+
+```{r}
+#| echo: false
+#| label: fig-kmeans
+#| fig-cap: "K-Means Clustering"
+
+row.names(scaled_df) <- player_names
+km.res <- kmeans(scaled_df, 3, nstart = 25)
+
+fviz_cluster(km.res, scaled_df, ellipse = TRUE, ellipse.alpha= 0.2,
+             palette = c("#1b998b", "#2e294e", "#f46036"), repel = TRUE,
+             main= FALSE, xlab= FALSE, ylab = FALSE,
+             labelsize = 18,
+             ggtheme = theme_good)
+
+```
+
+1.  **Light Green Cluster (Circle): "Defensores tradicionales"**
+
+Players in this cluster, like Sebastian Olmedo and Arturo Ortiz, exhibit strong defensive capabilities, as evidenced by the cluster's alignment with key defensive actions such as tackles, interceptions, and blocks.
+This group is indicative of players who excel in defensive duties, demonstrating a high degree of proficiency in preventing opposition attacks.
+The outliers "Andres Micolta Arroyo" and "Guido Pizarro" may represent players with unique defensive styles or roles that differ from the standard defensive metrics, warranting closer examination.
+
+2.  **Red-Orange Cluster (Triangle): "Defendores diferentes"**
+
+This cluster features players such as Carlos Salcedo, who are typically positioned further to the right, suggesting a distinct playing style.
+These individuals may have fewer minutes on the pitch or adopt a defensive approach that doesn't primarily focus on tackles, interceptions, and blocks.
+An example within this category is Hector Moreno of Monterrey, who exemplifies a style that balances traditional defensive duties with advanced playmaking and ball distribution skills.
+The outlier "Unai Bilbao" suggests a player who might either excel exceptionally in these areas or possess a unique set of skills differing from the main group.
+
+3.  **Purple Cluster (Square): "Defensores Versátiles"**
+
+This group, featuring Diego De Buen and Erik Lira, showcases versatility, balancing defensive responsibilities and some with the ability to support midfield and forward play, indicative of a modern, flexible center-back.
+This adaptability makes them valuable for strategies requiring defensive solidity and midfield support.
+
+## Agglomerative Hierarchical Clustering
+
+Agglomerative Hierarchical Clustering is a popular method used in data analysis to group objects into clusters based on their similarities.
+Starting with each object in its own cluster, it iteratively combines the closest pairs into larger clusters until all objects are in a single group or a stopping criterion is met.
+This bottom-up approach produces a dendrogram, a tree-like diagram that illustrates the series of merges and the hierarchical structure of the clusters.
+
+Applied the Ward.D2 approach, a specific type of Agglomerative Hierarchical Clustering, our main goal here is to reduce the sum of squared differences, also known as the 'loss of information,' across all clusters.
+This reduction relies on calculating the squared Euclidean distances among the points in our dataset, a method that aligns with Ward's strategy to decrease the total variance within each cluster continuously.
+This technique results in clusters that are more evenly distributed and meaningful, facilitating a better interpretation of the dataset's intrinsic structure since it generally forms clusters that are comparable in size.
+
+The resulting dendrogram, illustrated below in @fig-Hierarchical, visualizes the hierarchical structure and the process of cluster formation.
+It provides insights into the data's underlying patterns and relationships by showing how individual observations are grouped into clusters based on their similarities and how these clusters are combined into larger clusters as we move up the hierarchy.
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-Hierarchical
+#| fig-cap: "Hierarchical Clustering"
+
+res.dist <- get_dist(scaled_df, method = "euclidian")
+res.hc <- hclust(res.dist, method = "ward.D2")
+
+# Visualize using factoextra
+fviz_dend(res.hc, k = 3,
+          cex = 1, # label size
+          horiz= TRUE, rect = TRUE,
+          k_colors = c("#1b998b","#2e294e","#f46036"),
+          ggtheme = theme_good)
+```
+
+**Observations:**
+
+1.  The light green cluster at the bottom includes players such as Sebastian Olmedo and Arturo Ortiz, indicating a group likely characterized by traditional defensive skills.
+
+2.  The purple cluster at the top, with players like Jesús Orozco and Igor Lichnovsky, suggesting these may be more versatile defenders who contribute both defensively and in initiating play, possibly indicating a balance between defensive robustness and ability to support midfield or offensive actions.
+
+3.  The red-orange cluster in the middle features players like Hector Moreno and Diego Reyes, could represent those who are perhaps less involved in direct defensive actions maybe because they spend less time on the pitch, but might play roles in ball distribution or possess other unique attributes distinguishing them from the purely defensive or hybrid players.
+
+## Conclusion
+
+It is clear that different players fulfill their essential roles as center-back defenders.
+The art of defending, often overshadowed by the allure of goals and assists, remains the cornerstone of every successful football team.
+No team can dominate their league or excel in individual competitions without a strong defensive line.
+Employing machine learning classification methods, including PCA, non-hierarchical k-means, and hierarchical clustering, holds profound significance in sports analytics, particularly in identifying similarities among players based on their defensive traits.
+This approach can significantly aid teams in making informed decisions, especially during the transfer window, by identifying the ideal replacements that fit a specific defensive role, thereby enhancing team performance.
+
+However, it is crucial to acknowledge significant limitations.
+For instance, there are skilled center-backs returning from injuries who have played minimally this season, which may influence their current performance levels as they regain their form.
+Additionally, some teams may experience a poor start to the season but later find themselves on a winning streak.
+The distinction between home and away games can also significantly impact player performance, with the venue potentially playing a crucial role in each match's outcome.
+Furthermore, matches against top-tier teams in the tournament can demand more from a player defensively, contrasting with games against weaker teams where the defensive workload might be substantially less.
+
+Future enhancements for this project should consider several factors.
+Initially, the data was collected from the beginning of the tournament, from matchday 1 to matchday 9, which only represents the mid-point of the season.
+Since each season (Apertura and Clausura) comprises 17 matchdays, a more precise model could be developed with information spanning the entire season.
+Additionally, incorporating data on full-backs, who also play defensive roles, could alter the classification narrative of players significantly.
+Lastly, enriching the dataset with additional metrics such as possession and aerial duels could further refine the differentiation of player types in defensive positioning.
+
+## Acknowledgments
+
+I would like to express my sincere gratitude to the faculty members who guided me through my graduate studies in Applied Statistics at the Department of Mathematics and Statistics, California State University - Long Beach.
+Special acknowledgments to Dr. Sung Kim, Dr. Kagba Suaray, Dr. Olga Korosteleva, Dr. Rebecca Le, and Dr. Hojin Moon for their invaluable mentorship and support during my academic journey.
+
+## References
+
+Johnson, R. A., & Wichern, D. W.
+(2007).
+*Applied Multivariate Statistical Analysis*.
+Prentice Hall.
+
+Nadir, N.
+(2021, September 21).
+Assessing NBA Player Similarity with Machine Learning.
+*Medium, Towards Data Science*.
+<https://towardsdatascience.com/which-nba-players-are-most-similar-machine-learning-provides-the-answers-r-project-b903f9b2fe1f>.
+
+OUKHOUYA, H.
+(2023, April 2).
+NBA Player Performance Analysis: PCA, Hierarchical Clustering, and K-Means Clustering.
+*RPubs*.
+<https://rpubs.com/HassanOUKHOUYA/NBA_Player_Performance_Analysis_PCA_Hierarchical_Clustering_and_K_Means_Clustering>.
