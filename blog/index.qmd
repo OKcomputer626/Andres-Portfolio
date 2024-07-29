@@ -8,6 +8,7 @@ description-meta: "Welcome to my blog, I’m thrilled to welcome you! Here, you 
 listing:
   - id: posts_2024
     contents:
+      - "Bayesian Leagues Cup/index.qmd"
       - "MLS Predictions/Predicting Football Match Outcomes Using Bayesian Poisson-Gamma Distribution.qmd"
       - "Liga MX Classification Machine Learning/index.qmd"
     sort: "date desc"
