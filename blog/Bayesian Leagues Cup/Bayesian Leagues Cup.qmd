@@ -1,5 +1,0 @@
----
-title: "Bayesian Leagues Cup"
-editor: visual
----
-
