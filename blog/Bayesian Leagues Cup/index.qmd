@@ -372,7 +372,7 @@ The predicted number of goals for an upcoming match is approximately 1.5 goals, 
 
 ## Predictions for All Teams
 
-Using the posterior predictive model, we simulated the expected number of goals for all teams in their upcoming matches with 4000 runs.
+Again, using the posterior predictive model, we simulated the expected number of goals for all teams in their upcoming matches with 4000 runs.
 This extensive simulation, based on the current state of the tournament as of July 27, 2024, allows us to delve further into making projections and prediction probabilities.
 
 ## Results
