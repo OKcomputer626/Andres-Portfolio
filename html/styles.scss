@@ -441,3 +441,13 @@ p {
     font-size: 1em !important; /* Adjust for readability */
     margin-bottom: 20px; /* Add spacing after paragraphs */
 }
+
+// Add styles for callouts
+.callout {
+    background-color: darken($gray-100, 5%) !important;
+    border-color: $link-color !important;
+    
+    .callout-title {
+        background-color: darken($gray-100, 8%) !important;
+    }
+}

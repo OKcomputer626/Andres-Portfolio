@@ -194,3 +194,13 @@ p <- df2 %>%
 # Save the plot for TidyTuesday 2024, Week 50 with specified dimensions.
 save_plot(p, type = "tidytuesday", year = 2024, week = 50, width = 8, height = 4)
 ```
+
+#### 9. 🚀 GitHub Repository
+
+::: {.callout-tip collapse="true"}
+##### Expand for GitHub Repo
+
+The complete code for this analysis is available in [`tt_2024_50.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2024/tt_2024_50.qmd).
+
+For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
+:::
