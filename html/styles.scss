@@ -131,6 +131,10 @@ pre.text, pre.sourceCode, .cell-output pre {
  z-index:1000; 
 }
 
+.navbar-nav .nav-link.active, .navbar-nav .nav-link.show {
+    color: $cyan;
+}
+
 .navbar-dark .navbar-nav .nav-link {
   z-index:0;
   color: #fff;
@@ -142,7 +146,7 @@ pre.text, pre.sourceCode, .cell-output pre {
 
 .navbar-dark:hover .navbar-nav:hover .nav-link:hover{
   z-index: 0;
-  color: $blue !important;
+  color: $cyan !important;
 }
 
 .navbar-title {
@@ -450,4 +454,132 @@ p {
     .callout-title {
         background-color: darken($gray-100, 8%) !important;
     }
+}
+
+// Add styles for selection highlighting
+::selection {
+    background-color: $cyan !important;
+    color: $white !important;
+}
+
+.navbar-nav {
+
+  .show>.nav-link,
+  .active>.nav-link,
+  .nav-link.active {
+    color: $cyan;
+  }
+
+  .nav-link:hover,
+  .nav-link:focus {
+    color: $cyan;
+  }
+
+  .nav-link {
+    color: body-mix(50%);
+  }
+
+  a.nav-link,
+  a.nav-link:after,
+  a.nav-link:before {
+    transition: all .75s;
+  }
+
+  a.nav-link {
+    position: relative;
+  }
+
+  a.nav-link:hover:after {
+    width: 80%;
+  }
+
+  a.nav-link.active:after,
+  a.nav-link.active:hover:after {
+    border-top: .2em solid $cyan;
+  }
+
+  a.nav-link:hover:after,
+  a.nav-link:after {
+    border-top: .1em solid $cyan;
+  }
+
+  a.nav-link:after {
+    position: absolute;
+    border-top: .1em solid body-mix(90%);
+    content: "";
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+    width: 0%;
+  }
+
+  .show>.nav-link,
+  .active>.nav-link,
+  .nav-link.active {
+    font-weight: bolder;
+  }
+
+  .nav-link:hover,
+  .nav-link:focus {
+    color: $cyan;
+  }
+}
+
+@media (max-width: 992px) {
+  .navbar-expand-lg {
+
+    a.nav-link.active:after,
+    a.nav-link.active:hover:after,
+    a.nav-link:hover:after,
+    a.nav-link:after {
+      border-top: 0 solid $cyan;
+    }
+  }
+}
+
+.navbar-title {
+  transition: all .35s ease;
+  display: inline-block;
+  padding: .10em .4em;
+  position: relative;
+  font-weight: bolder;
+}
+
+.navbar-title::before,
+.navbar-title::after {
+  content: '';
+  height: 14px;
+  width: 14px;
+  position: absolute;
+  transition: all .35s ease;
+  opacity: 0;
+}
+
+.navbar-title::before {
+  content: '';
+  right: 0;
+  top: 0;
+  border-top: 3px solid $cyan;
+  border-right: 3px solid $cyan;
+  transform: translate(-100%, 50%);
+}
+
+.navbar-title:after {
+  content: '';
+  left: 0;
+  bottom: 0;
+  border-bottom: 3px solid $cyan;
+  border-left: 3px solid $cyan;
+  transform: translate(100%, -50%)
+}
+
+.quarto-title-banner .quarto-title .title {
+  color: $cyan;
+}
+
+.quarto-title-banner {
+  margin-bottom: 1em;
+  color: $cyan;
+  background: body-mix(99%);
 }
