@@ -1,5 +1,7 @@
 /*-- scss:defaults --*/
 
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
 /* From https://github.com/andrewheiss/ath-quarto/blob/main/html/ath.scss */
 
 $white:    #ffffff !default;
@@ -14,10 +16,10 @@ $gray-800: #373a3c !default;
 $gray-900: #212529 !default;
 $black:    #000000 !default;
 
-$blue:    #134B70 !default;
+$blue:    #134b70 !default;
 $indigo:  #6610f2 !default;
 $purple:  #201E43 !default;
-$pink:    #A52C60 !default;
+$pink:    #af7595 !default;
 $red:     #CF4446 !default;
 $orange:  #E6AA04 !default;
 $light-orange:  #FB9E07 !default;
@@ -37,7 +39,7 @@ $light:     $gray-400 !default;
 $dark:      $black !default;
 
 
-$--bs-navbar-color: #fff !default;
+$--bs-navbar-color: $red !default;
 
 // Links
 $link-color: $blue !default;
@@ -62,6 +64,44 @@ $btn-code-copy-color-active: $blue !default;
 
 
 /*-- scss:rules --*/
+
+/* Apply Roboto Mono to all heading tags */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Raleway', monospace;
+}
+
+/* Apply Roboto Serif to all paragraphs, captions, and other text */
+p, caption, body, .caption, blockquote, li, .text, div {
+  font-family: 'Roboto', serif;
+}
+
+/* You can customize specific elements as needed, for example: */
+
+h2 {
+  font-size: 2em;
+}
+
+p {
+  font-size: 1.1em;
+}
+
+
+/* Space before title */
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
+    margin-top: 40px;
+}
+
+/* Specific styling for 'Andres Gonzalez' */
+.site-owner {
+    font-size: 26px;
+    font-family: 'Raleway', monospace;
+}
+
+/* Apply 'Raleway' to all navbar items */
+nav ul li a, .site-owner {
+    font-family: 'Raleway', monospace;
+    font-size: 15px; /* Adjust font size for other navbar links */
+}
 
 main {
   margin-top: 0;
@@ -181,6 +221,58 @@ pre.text, pre.sourceCode, .cell-output pre {
             }
         }
     }
+}
+
+.quarto-title-banner a {
+    color: #212529;
+}
+
+// TOC
+
+/* Target the TOC container with the specific ID and class */
+nav#TOC.toc-active {
+    background-color: transparent !important; /* Remove background color */
+    font-size: 0.9em !important; /* Adjust the font size */
+    color: #212529 !important; /* Set readable text color */
+    padding: 10px !important; /* Add padding for better spacing */
+}
+
+/* Style the links inside the TOC */
+nav#TOC.toc-active a {
+    color: #212529 !important; /* Set readable color for links */
+    font-size: 0.9em !important; /* Ensure smaller font size */
+    text-decoration: none !important; /* Remove underline from links */
+}
+
+/* Add hover effects to TOC links */
+nav#TOC.toc-active a:hover {
+    color: #000 !important; /* Set darker color for better readability on hover */
+}
+
+nav#TOC.toc-active a.active {
+    font-weight: bold; /* Make the active section bold */
+    color: #000 !important; /* Ensure visibility of the active section */
+    border-left: 3px solid #000; /* Add a left border for better visibility */
+}
+
+
+/* TOC Test*/
+nav#TOC.toc-active ul {
+    display: block; /* Ensure the TOC list is displayed in a vertical stack */
+}
+
+nav#TOC.toc-active ul li {
+    display: block; /* List items should stack vertically */
+}
+
+
+nav#TOC.toc-active ul {
+    display: block !important; /* Force TOC to stack vertically */
+    padding-left: 0; /* Adjust padding if needed */
+}
+
+nav#TOC.toc-active ul li {
+    margin-right: 0 !important; /* Remove the margin if it's causing horizontal alignment issues */
 }
 
 #title-block-header.quarto-title-block.default .description, .title{
@@ -322,3 +414,30 @@ pre.text, pre.sourceCode, .cell-output pre {
   color: $blue;
 }
 
+/* Reduce the font size of card titles */
+h5.no-anchor.card-title.listing-title {
+    font-size: 20px !important; /* Adjust the size to your preference */
+    line-height: 1.3; /* Adjust line height for better spacing */
+}
+
+// FONTS
+
+/* Set base font size for the entire document */
+body {
+    font-size: 1em !important; /* Adjust as necessary */
+    line-height: 1.6 !important; /* Ensure proper readability */
+    font-family: 'Raleway', monospace; /* Apply Roboto Mono for consistency */
+}
+
+/* Heading adjustments */
+h2, h3, h4, h5, h6 {
+    font-family: 'Raleway', monospace !important;
+    font-size: 1.5em !important; /* Adjust heading size */
+    margin-bottom: 15px; /* Add some spacing */
+}
+
+/* Paragraph adjustments */
+p {
+    font-size: 1em !important; /* Adjust for readability */
+    margin-bottom: 20px; /* Add spacing after paragraphs */
+}
