@@ -261,10 +261,6 @@ pre.text, pre.sourceCode, .cell-output pre {
     }
 }
 
-.quarto-title-banner a {
-    color: #212529;
-}
-
 // TOC
 
 /* Target the TOC container with the specific ID and class */
@@ -291,26 +287,6 @@ nav#TOC.toc-active a.active {
     font-weight: bold; /* Make the active section bold */
     color: #000 !important; /* Ensure visibility of the active section */
     border-left: 3px solid #000; /* Add a left border for better visibility */
-}
-
-
-/* TOC Test*/
-nav#TOC.toc-active ul {
-    display: block; /* Ensure the TOC list is displayed in a vertical stack */
-}
-
-nav#TOC.toc-active ul li {
-    display: block; /* List items should stack vertically */
-}
-
-
-nav#TOC.toc-active ul {
-    display: block !important; /* Force TOC to stack vertically */
-    padding-left: 0; /* Adjust padding if needed */
-}
-
-nav#TOC.toc-active ul li {
-    margin-right: 0 !important; /* Remove the margin if it's causing horizontal alignment issues */
 }
 
 #quarto-content>* {
@@ -470,6 +446,5 @@ h5.no-anchor.card-title.listing-title {
 }
 
 .sidebar nav[role=doc-toc]>h2 {
-    font-size: 1.4em;
+    font-size: 1.2em;
 }
-

@@ -11,7 +11,7 @@ categories:
 draft: false
 number-sections: false
 image: soccer_cleat.jpg
-toc-depth: 3
+toc-depth: 4
 format:
   html:
     fig-cap-location: bottom
