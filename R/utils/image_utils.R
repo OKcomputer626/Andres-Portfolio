@@ -1,4 +1,3 @@
-# Saving normal images (no patchwork)
 save_plot <- function(plot, 
                       type = c("tidytuesday", "swd", "standalone"),
                       year = format(Sys.Date(), "%Y"),
@@ -37,11 +36,9 @@ save_plot <- function(plot,
   # Set up paths
   base_path <- base_paths[[type]]
   main_file <- file.path(base_path, file_name)
-  thumb_file <- file.path(base_path, "thumbnails", file_name)
   
   # Create directories if they don't exist
   dir.create(dirname(main_file), recursive = TRUE, showWarnings = FALSE)
-  dir.create(dirname(thumb_file), recursive = TRUE, showWarnings = FALSE)
   
   # Input validation
   if (type == "tidytuesday" && is.null(week)) {
@@ -61,11 +58,6 @@ save_plot <- function(plot,
     dpi = 300
   )
   
-  # Create thumbnail using magick
-  magick::image_read(main_file) |> 
-    magick::image_resize("400") |> 
-    magick::image_write(thumb_file)
-  
-  # Return the paths invisibly
-  invisible(list(main = main_file, thumbnail = thumb_file))
+  # Return the path invisibly
+  invisible(main_file)
 }

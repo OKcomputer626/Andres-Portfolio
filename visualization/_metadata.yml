@@ -35,7 +35,6 @@ format:
 # Default knitr options
 execute: 
   freeze: true                                                  
-  cache: true                                                   
   error: false
   message: false
   warning: false
