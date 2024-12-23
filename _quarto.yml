@@ -28,7 +28,7 @@ website:
     type: textbox
   
   navbar:
-    pinned: false
+    pinned: true
     logo: /img/data.png
     left:
       - text: Blog
@@ -83,6 +83,8 @@ format:
       - flatly
       - html/styles.scss
     toc: false
+    grid: 
+      body-width: 900px
     anchor-sections: true
     fig-cap-location: margin
     reference-location: margin

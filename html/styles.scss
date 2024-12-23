@@ -75,22 +75,6 @@ p, caption, body, .caption, blockquote, li, .text, div {
   font-family: 'Roboto', serif;
 }
 
-/* You can customize specific elements as needed, for example: */
-
-h2 {
-  font-size: 2em;
-}
-
-p {
-  font-size: 1.1em;
-}
-
-
-/* Space before title */
-h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
-    margin-top: 40px;
-}
-
 /* Apply 'Raleway' to all navbar items */
 nav ul li a, .site-owner {
     font-family: 'Raleway', monospace;
@@ -107,11 +91,6 @@ pre.text, pre.sourceCode, .cell-output pre {
 
 .navbar-nav.navbar-nav-scroll.ms-auto {
     flex-direction: row;
-}
-
-.sidebar nav[role="doc-toc"]>ul li a {
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
 }
 
 .navbar {
@@ -144,7 +123,7 @@ pre.text, pre.sourceCode, .cell-output pre {
   .nav-link {
     color: body-mix(50%);
   }
-
+  
   a.nav-link,
   a.nav-link:after,
   a.nav-link:before {
@@ -334,19 +313,6 @@ nav#TOC.toc-active ul li {
     margin-right: 0 !important; /* Remove the margin if it's causing horizontal alignment issues */
 }
 
-#title-block-header.quarto-title-block.default .description, .title{
-  color: $white;
-}
-
-#title-block-header.quarto-title-block.default .title, 
-#title-block-header.quarto-title-block.default .code-tools-button p::before,
-#title-block-header.quarto-title-block.default .code-tools-button i::before
-{
-  color: $white;
-}
-
-
-
 #quarto-content>* {
   padding: 0;
 }
@@ -479,27 +445,6 @@ h5.no-anchor.card-title.listing-title {
     line-height: 1.3; /* Adjust line height for better spacing */
 }
 
-// FONTS
-
-/* Set base font size for the entire document */
-body {
-    font-size: 1em !important; /* Adjust as necessary */
-    line-height: 1.6 !important; /* Ensure proper readability */
-    font-family: 'Raleway', monospace; /* Apply Raleway for consistency */
-}
-
-/* Heading adjustments */
-h2, h3, h4, h5, h6 {
-    font-family: 'Raleway', monospace !important;
-    font-size: 1.5em !important; /* Adjust heading size */
-    margin-bottom: 15px; /* Add some spacing */
-}
-
-/* Paragraph adjustments */
-p {
-    font-size: 1em !important; /* Adjust for readability */
-    margin-bottom: 20px; /* Add spacing after paragraphs */
-}
 
 // Add styles for callouts
 .callout {
@@ -515,5 +460,16 @@ p {
 ::selection {
     background-color: $cyan !important;
     color: $white !important;
+}
+
+#quarto-header>nav {
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-bottom: 0.5em;
+    padding-top: 0.5em;
+}
+
+.sidebar nav[role=doc-toc]>h2 {
+    font-size: 1.4em;
 }
 
