@@ -1,5 +1,5 @@
 ---
-title: "`Andres.log()`"
+title: "`Andresviz.log()`"
 author: ""
 title-block-banner: false
 page-layout: full
@@ -21,7 +21,7 @@ engine: knitr
 freeze: false
 ---
 
-Welcome to `Andres.log()`! Here, I share my collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting project!
+Welcome to `Andresviz.log()`! Here, I share my collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting project!
 
 ## 2024
 
