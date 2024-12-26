@@ -1,0 +1,15 @@
+{
+  "hash": "9027f7aad98b67c9c88c109fd889334a",
+  "result": {
+    "engine": "knitr",
+    "markdown": "### <mark> **How This Graphic Was Made** </mark>\n\n#### 1. 📦 Load Packages & Setup\n\n\n\n::: {.cell}\n\n```{.r .cell-code}\n# Load necessary packages using pacman for easier dependency management\npacman::p_load(\n  tidyverse,   # Collection of R packages for data science (ggplot2, dplyr, etc.)\n  showtext,    # Enables custom fonts for ggplot2\n  ggtext,      # Adds rich text formatting to ggplot2\n  skimr       # Provides summary statistics in a readable format\n)\n```\n:::\n\n\n\n#### 2. 📖 Read in the Data\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 3. 🕵️ Examine the Data\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 4. 🤼 Wrangle Data\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 5. 🔤 Text\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 6. 📊 Plot\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 7. 💾 Save\n\n\n\n::: {.cell}\n\n:::\n\n\n\n#### 8. 🚀 GitHub Repository\n\n\n\n\n",
+    "supporting": [],
+    "filters": [
+      "rmarkdown/pagebreak.lua"
+    ],
+    "includes": {},
+    "engineDependencies": {},
+    "preserve": {},
+    "postProcess": true
+  }
+}
