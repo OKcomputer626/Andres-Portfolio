@@ -6,8 +6,9 @@ date: December 20, 2024
 categories: [TidyTuesday, R Programming, Data Visualization]
 tags: [ggplot2, parfumo, data-visualization, tidyverse]
 image: "tt_50_2024.png"
-editor_options: 
-  chunk_output_type: inline
+editor: 
+  markdown: 
+    wrap: sentence
 ---
 
 ![Dumbbell plot showing perfumes with the lowest and highest average ratings by decade (1980–2024), based on 25+ user ratings on Parfumo. Each row represents a decade, labeled with the total number of rated perfumes (n). The endpoints of each dumbbell indicate the lowest and highest-rated perfumes, with notable examples annotated. Source: Parfumo.](tt_50_2024.png){#fig-1}
