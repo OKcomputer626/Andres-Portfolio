@@ -17,6 +17,7 @@ toc-location: right
 date-format: "MMMM D, YYYY"
 code-tools: false
 comments: false
+engine: knitr
 freeze: false
 ---
 
