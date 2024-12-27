@@ -80,10 +80,6 @@ nav ul li a, .site-owner {
     font-family: 'Raleway', monospace;
 }
 
-main {
-  margin-top: 0;
-  margin-bottom: 0;
-}
 
 pre.text, pre.sourceCode, .cell-output pre {
     font-size: 0.775em;
@@ -436,6 +432,13 @@ h5.no-anchor.card-title.listing-title {
 ::selection {
     background-color: $cyan !important;
     color: $white !important;
+}
+
+#quarto-header>nav {
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-bottom: 0.5em;
+    padding-top: 0.5em;
 }
 
 .sidebar nav[role=doc-toc]>h2 {
