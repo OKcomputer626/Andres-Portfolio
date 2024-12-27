@@ -1,6 +1,5 @@
 ---
 title: "The Scent of Data"
-description: "Perfume ratings have become more varied in recent decades, with the 2000s and 2010s displaying the widest range driven by diverse user opinions, while the highest ratings consistently reflect luxury brands."
 lightbox: true
 date: December 20, 2024
 categories: [TidyTuesday, R Programming, Data Visualization]
