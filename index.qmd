@@ -29,7 +29,7 @@ listing:
 
 ::: {.column-screen}
 ```{=html}
-<link rel="stylesheet" href="./landing_page_styles.css">
+<link rel="stylesheet" href="html/landing_page_styles.css">
 <div class="gradient_bg">
     <div class="hero section_padding" id="home">
         <div class="hero_content">
