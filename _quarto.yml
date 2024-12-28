@@ -61,13 +61,6 @@ website:
     
   google-analytics: "G-MDSNGGTV5L"
   
-  page-footer:
-    left: |
-      <span class="faux-block">{{< fa brands creative-commons >}} 2024 Andres Gonzalez</span>
-      <span class="faux-block">All content licensed under<br>[{{< fa brands creative-commons >}} {{< fa brands creative-commons-by >}} Creative Commons CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)</span> 
-    right: |
-      <span class="faux-block">Made with {{< fa brands r-project >}} and [Quarto](https://quarto.org/)</span>
-      <span class="faux-block"><a href="https://github.com/OKcomputer626/Andres-Portfolio">View the source at {{< fa brands github >}} GitHub</a></span>
   
 execute:
   freeze: true
