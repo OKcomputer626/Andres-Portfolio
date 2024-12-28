@@ -71,7 +71,7 @@ website:
       <span class="faux-block"><a href="https://github.com/OKcomputer626/Andres-Portfolio">View the source at {{< fa brands github >}} GitHub</a></span>
   
 execute:
-  freeze: true
+  freeze: auto
   
 filters:
   - html/newpagelink.lua
