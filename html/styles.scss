@@ -449,6 +449,22 @@ h5.no-anchor.card-title.listing-title {
     font-size: 1.2em;
 }
 
+.navbar-dark .navbar-nav .nav-link {
+  z-index:0;
+  color: #fff;
+}
+.nav-link {
+  color: #fff;
+}
+.navbar-dark:hover .navbar-nav:hover .nav-link:hover{
+  z-index: 0;
+  color: $blue !important;
+}
+.navbar-title {
+  color: #fff;
+  z-index: 10;
+}
+
 #title-block-header.quarto-title-block.default .description, .title{
   color: $white;
 }
