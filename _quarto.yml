@@ -79,10 +79,9 @@ format:
   html:
     include-in-header: html/seo.html
     theme: 
+      - flatly
       - html/styles.scss
     toc: false
-    grid: 
-      body-width: 900px
     anchor-sections: true
     fig-cap-location: margin
     reference-location: margin
