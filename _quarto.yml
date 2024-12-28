@@ -79,7 +79,7 @@ filters:
 format:
   html:
     include-in-header: html/seo.html
-    fontsize: 1.5em
+    fontsize: 1.1em
     theme: 
       - flatly
       - html/styles.scss
