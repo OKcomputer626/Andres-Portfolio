@@ -107,10 +107,6 @@ pre.text, pre.sourceCode, .cell-output pre {
   }
 }
 
-.fixed-top {
- z-index:1000; 
-}
-
 .navbar-nav {
 
   .show>.nav-link,
@@ -451,4 +447,14 @@ h5.no-anchor.card-title.listing-title {
 
 .sidebar nav[role=doc-toc]>h2 {
     font-size: 1.2em;
+}
+
+#title-block-header.quarto-title-block.default .description, .title{
+  color: $white;
+}
+#title-block-header.quarto-title-block.default .title, 
+#title-block-header.quarto-title-block.default .code-tools-button p::before,
+#title-block-header.quarto-title-block.default .code-tools-button i::before
+{
+  color: $white;
 }
