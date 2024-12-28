@@ -77,9 +77,8 @@ filters:
 
 format:
   html:
-    fontsize: 1.1em
+    include-in-header: html/seo.html
     theme: 
-      - flatly
       - html/styles.scss
     toc: false
     grid: 
