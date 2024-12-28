@@ -3,8 +3,6 @@ comments: false
 page-layout: full
 format:
   html: 
-    margin-top: 0em
-    margin-bottom: 0em
     minimal: true
     smooth-scroll: true
     fig-responsive: true
@@ -19,7 +17,6 @@ listing:
   max-items: 3
   grid-columns: 3
   fields: [image, date, title, reading-time]
-title-block-banner: false
 ---
 
 
