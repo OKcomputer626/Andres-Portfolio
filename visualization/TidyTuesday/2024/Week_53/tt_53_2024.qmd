@@ -238,7 +238,7 @@ andresutils::save_plot(p2, type = "tidytuesday", year = 2024, week = 53, width =
 ::: {.callout-tip collapse="true"}
 ##### Expand for GitHub Repo
 
-Explore the complete code for this visualization in the following Quarto file: [`tt_53_2024.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2024/tt_53_2024.qmd).
+Explore the complete code for this visualization in the following Quarto file: [`tt_53_2024.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2024/Week_53/tt_53_2024.qmd).
 
 For additional visualizations and projects, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
 :::
