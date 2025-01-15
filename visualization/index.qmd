@@ -8,8 +8,8 @@ description-meta: "A collection of data visualizations made with R, featuring Ti
 listing:
   - id: visualization
     contents: 
-    - TidyTuesday
-    - Visualizations
+      - TidyTuesday
+      - Visualizations
     sort: "date desc"
     template: ../html/blog/listing.ejs
     categories: true
@@ -25,6 +25,7 @@ comments: false
 Welcome to `Andresviz.log()`! Here, I share my collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting project!
 
 ## 2025
+
 ::: {#visualization}
 :::
 

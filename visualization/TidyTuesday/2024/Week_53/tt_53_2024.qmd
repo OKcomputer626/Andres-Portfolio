@@ -2,7 +2,7 @@
 title: "James Beard Foundation"
 description: "The James Beard Foundation Awards are annual honors recognizing excellence in the culinary, hospitality, and food media industries across the United States."
 lightbox: true
-date: today
+date: January 3, 2025
 categories: [TidyTuesday, R Programming, Data Visualization]
 tags: [ggplot2, data-visualization, tidyverse]
 image: "tt_53_2024.png"

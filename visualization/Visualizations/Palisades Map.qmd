@@ -2,7 +2,7 @@
 title: "Pacific Palisades"
 description: "A map of Pacific Palisades, California, showing streets, building footprints, and the Pacific Ocean in a minimalist blue-and-beige design."
 lightbox: true
-date: today
+date: January 15, 2025
 categories: [Map, R Programming, Data Visualization, sf]
 tags: [ggplot2, data-visualization, tidyverse, sf]
 image: "Palisades Map.png"
