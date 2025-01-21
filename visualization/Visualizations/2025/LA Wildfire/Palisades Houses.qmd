@@ -1,15 +1,17 @@
 ---
 title: "Damage Assessment From The Palisades Fire"
-description: "A map of Pacific Palisades, California, showing streets, building footprints, and the Pacific Ocean in a minimalist blue-and-beige design."
+description: "The damage levels caused by the Palisades Fire are shown across homes built in different decades, with 53.7% of damage assessments categorized as Destroyed (>50%) and 65.9% of homes from the 1970s sustaining No Damage. Older homes, particularly those built before 1960, were significantly impacted, highlighting the need for fire-resistant retrofits."
 lightbox: true
 date: January 20, 2025
 categories: [R Programming, Data Visualization, Waffle]
-tags: [ggplot2, data-visualization, tidyverse, sf]
-image: "Palisades Map.png"
+tags: [ggplot2, data-visualization, tidyverse, Waffle]
+image: "Palisades Houses.png"
 editor: 
   markdown: 
     wrap: sentence
 ---
+
+![The plot is a waffle-style chart that uses pictograms (house icons) to represent the number of homes inspected, categorized by the decade they were built. Each bar corresponds to a decade, with the house icons color-coded to show different damage levels: "No Damage," "Affected (1-9%)," "Minor (10-25%)," "Major (26-50%)," and "Destroyed (>50%)." This format helps visualize both the quantity of inspections and the severity of damage across time, emphasizing trends like the vulnerability of older homes and the resilience of homes from the 1970s.](Palisades Houses.png){#fig-1}
 
 ### <mark> **How This Graphic Was Made** </mark>
 
