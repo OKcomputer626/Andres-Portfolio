@@ -1,6 +1,6 @@
 ---
 title: "Damage Assessment From The Palisades Fire"
-description: "The damage levels caused by the Palisades Fire are shown across homes built in different decades, with 53.7% of damage assessments categorized as Destroyed (>50%) and 65.9% of homes from the 1970s sustaining No Damage. Older homes, particularly those built before 1960, were significantly impacted, highlighting the need for fire-resistant retrofits."
+description: "The damage levels caused by the Palisades Fire are shown across homes built in different decades, with 53.7% of damage assessments categorized as Destroyed (>50%) and 65.9% of homes from the 1970s sustaining No Damage."
 lightbox: true
 date: January 20, 2025
 categories: [R Programming, Data Visualization, Waffle]
