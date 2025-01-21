@@ -280,3 +280,13 @@ final_plot <- ggdraw(p) +
 # Save the final visualization as a PNG file
 ggsave("Palisades Houses.png", plot = final_plot, height = 5, width = 8)
 ```
+
+#### 8. 🚀 GitHub Repository
+
+::: {.callout-tip collapse="true"}
+##### Expand for GitHub Repo
+
+Explore the complete code for this visualization in the following Quarto file: [`Palisades Houses.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/Visualizations/2025/LA%20Wildfire/Palisades%20Houses.qmd).
+
+For additional visualizations and projects, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
+:::
