@@ -193,7 +193,7 @@ andresutils::save_plot(p, type = "tidytuesday", year = 2025, week = 4, width = 6
 ::: {.callout-tip collapse="true"}
 ##### Expand for GitHub Repo
 
-The complete code for this analysis is available in [`tt_04_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/tt_04_2025.qmd).
+The complete code for this analysis is available in [`tt_04_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/Week_04/tt_04_2025.qmd).
 
 For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
 :::
