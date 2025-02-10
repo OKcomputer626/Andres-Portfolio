@@ -2,7 +2,7 @@
 title: "Water Insecurity"
 description: "The tidycensus package in R is used to access and visualize U.S. Census data on social vulnerability indicators related to water insecurity in the Western U.S."
 lightbox: true
-date: today
+date: February 1, 2025
 categories: [TidyTuesday, R Programming, Data Visualization]
 tags: [ggplot2, data-visualization, tidyverse]
 image: "tt_04_2025.png"

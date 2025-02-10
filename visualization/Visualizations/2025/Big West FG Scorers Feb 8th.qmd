@@ -1,14 +1,16 @@
 ---
 title: "Big West FG Scorers"
-description: "The tidycensus package in R is used to access and visualize U.S. Census data on social vulnerability indicators related to water insecurity in the Western U.S."
+description: "The top 10 most efficient scorers in the Big West Conference for the 2024-2025 season are ranked by field goal percentage (FG%), with a minimum of 150 field goal attempts (FGA). Player details include team logos, class year, height, total shot attempts, and FG%, with a gradient emphasizing shooting efficiency."
 lightbox: true
-date: today
-categories: [TidyTuesday, R Programming, Data Visualization]
-tags: [ggplot2, data-visualization, tidyverse]
-image: "tt_04_2025.png"
+date: February 10, 2025
+categories: [gt, R Programming, Data Visualization, NCAA]
+tags: [gt, gtExtras, gtUtils, data-visualization, tidyverse]
+image: "Big West FG Scorers Feb 8th.png"
 editor_options: 
   chunk_output_type: inline
 ---
+
+![Using cbbdata, a package developed by Andrew Weatherman, field goal percentage data for the Big West Conference was retrieved for the 2024-2025 season. The table was created with gt, incorporating styling enhancements from gtExtras and gtUtils to improve formatting and visualization.](Big West FG Scorers Feb 8th.png){#fig-1}
 
 ### <mark> **How This Table Was Made** </mark>
 
@@ -174,7 +176,7 @@ gt_save_crop(data = t, "Big West FG Scorers Feb 8th.png", whitespace = 10, bg = 
 ::: {.callout-tip collapse="true"}
 ##### Expand for GitHub Repo
 
-The complete code for this analysis is available in [`tt_04_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/Week_04/tt_04_2025.qmd).
+The complete code for this analysis is available in [`Big West FG Scorers Feb 8th.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/Week_04/tt_04_2025.qmd).
 
 For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
 :::
