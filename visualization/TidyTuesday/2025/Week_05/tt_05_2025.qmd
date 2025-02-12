@@ -1,14 +1,16 @@
 ---
-title: ""
-description: ""
+title: "The Simpsons Dataset"
+description: "This visualization showcases IMDb ratings for The Simpsons episodes across multiple seasons, where color represents the rating (from 4.5 to 8.4) and dot size reflects the number of votes. Notably, Barthood (S27E09) holds the highest rating (8.4), while Lisa Goes Gaga (S23E22) is the lowest-rated episode (4.5) with the most votes."
 lightbox: true
-date: today
-categories: [TidyTuesday, R Programming, Data Visualization]
+date: February 12,2025
+categories: [TidyTuesday, R Programming, Data Visualization, Simpsons]
 tags: [ggplot2, data-visualization, tidyverse]
-image: ""
+image: "tt_05_2025.png"
 editor_options: 
   chunk_output_type: inline
 ---
+
+![Created using ggplot2 in R, the chart utilizes color encoding to represent IMDb ratings, ranging from 4.5 (lowest) to 8.4 (highest), as shown in the scale on the right. Size encoding indicates the number of IMDb votes per episode, with reference values (104, 600, and 1,215 votes) displayed in the legend. Notable highlights include "Barthood" (S27E09) as the highest-rated episode (8.4 IMDb, 698 votes) and "Lisa Goes Gaga" (S23E22) as the lowest-rated episode (4.5 IMDb, 1,215 votes), marked by the largest and most saturated pink dot.](tt_05_2025.png){#fig-1}
 
 ### <mark> **How This Graphic Was Made** </mark>
 
@@ -27,15 +29,15 @@ pacman::p_load(
   showtext,    # Enables custom fonts for ggplot2
   ggtext,      # Adds rich text formatting to ggplot2
   skimr,       # Provides summary statistics in a readable format
-  janitor,
-  shadowtext,
-  glue,
-  magick,
-  cowplot
+  janitor,     # Cleans and formats column names for consistency
+  shadowtext,  # Adds text with shadows in ggplot2 for better readability
+  glue         # Provides a more readable way to concatenate and format strings
 )
 
+# Add Google fonts
 font_add_google("Roboto Condensed", family = "Roboto")
 font_add("Simpsons", regular = here::here("fonts/Simpsons.otf"))
+
 # Add local font
 font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
 
@@ -62,8 +64,8 @@ episodes <- tuesdata$simpsons_episodes %>% clean_names()
 locations <- tuesdata$simpsons_locations %>% clean_names()
 script_lines <- tuesdata$simpsons_script_lines %>% clean_names()
 
-tidytuesdayR::readme(tuesdata)
-rm(tuesdata)
+tidytuesdayR::readme(tuesdata)  # Display dataset documentation
+rm(tuesdata)  # Remove raw data object to free up memory
 ```
 
 #### 3. 🕵️ Examine the Data
@@ -75,6 +77,7 @@ rm(tuesdata)
 #| results: hide
 #| warning: false
 
+# Preview the structure of each dataset using glimpse()
 glimpse(characters)
 glimpse(episodes)
 glimpse(locations)
@@ -86,26 +89,33 @@ glimpse(script_lines)
 ```{r}
 #| label: wrangle
 #| warning: false
+#| results: hide
 
+# Select the episode with the lowest IMDb rating
 episodes %>%
   slice_min(imdb_rating) %>%
   select(imdb_rating, imdb_votes, number_in_season, season, title)
 
+# Select the episode with the highest IMDb rating
 episodes %>%
   slice_max(imdb_rating) %>%
   select(imdb_rating, imdb_votes, number_in_season, season, title)
 
+# Select the episode with the fewest IMDb votes
 episodes %>%
   slice_min(imdb_votes) %>%
   select(imdb_votes)
 
+# Select the episode with the most IMDb votes
 episodes %>%
   slice_max(imdb_votes) %>%
   select(imdb_votes) 
 
+# Remove episodes with missing IMDb ratings
 episodes_clean <- episodes %>%
   drop_na(imdb_rating)
 
+# Count the number of episodes per season
 episodes_clean %>%
   group_by(season) %>%
   count(season)
@@ -136,6 +146,7 @@ cap <- paste0(
 #| label: plot
 #| warning: false
 
+# Create a scatter plot visualizing IMDb ratings and votes for each episode
 p <- episodes_clean %>%
   ggplot(aes(x = factor(number_in_season), y = fct_rev(factor(season)))) +
   geom_point(aes(color = imdb_rating, size = imdb_votes)) +
@@ -174,6 +185,7 @@ p <- episodes_clean %>%
 #| label: save
 #| warning: false
 
+# Save plot with dimensions
 andresutils::save_plot(p, type = "tidytuesday", year = 2025, week = 5, width = 6, height = 4.5)
 ```
 
@@ -182,7 +194,7 @@ andresutils::save_plot(p, type = "tidytuesday", year = 2025, week = 5, width = 6
 ::: {.callout-tip collapse="true"}
 ##### Expand for GitHub Repo
 
-The complete code for this analysis is available in [`tt_2024_50.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2024/tt_2024_50.qmd).
+The complete code for this analysis is available in [`tt_05_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/tt_05_2025.qmd).
 
 For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
 :::
