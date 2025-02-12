@@ -154,7 +154,10 @@ p <- episodes_clean %>%
   scale_size_area(breaks = c(104, 600, 1215), label = scales::comma) +
   guides(color = guide_colorbar(barheight = unit(7, "lines"),
                                 barwidth = unit(0.5, "lines"),
-                                order = 1),
+                                order = 1,
+                                theme = theme(
+                                  legend.title = element_text(margin = margin(b = 7))
+                                )),
          size = guide_legend(override.aes = list(shape = 21))) +
   labs(x = "Episode",
        y = "Season",
