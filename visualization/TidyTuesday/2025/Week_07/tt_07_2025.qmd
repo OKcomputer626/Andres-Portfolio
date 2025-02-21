@@ -146,7 +146,7 @@ cap <- paste0(
 p <- california %>%
   filter(is_nibrs == "TRUE") %>%
   ggplot() +
-  geom_polygon(aes(x = long, y = lat, group = group, fill = n), color = "gray40") +
+  geom_polygon(aes(x = long, y = lat, group = group, fill = n), color = "gray50") +
   geom_polygon(data = los_angeles, aes(x = long, y = lat, group = group), color = "#EFBF04", fill = NA, size = 1.5) +
   scale_fill_paletteer_c("ggthemes::Blue") +
   labs(caption = cap) +
