@@ -2,9 +2,9 @@
 title: "Agencies from the FBI Crime Data"
 description: ""
 lightbox: true
-date: today
-categories: [TidyTuesday, R Programming, Data Visualization]
-tags: [ggplot2, data-visualization, tidyverse]
+date: February 20, 2025
+categories: [TidyTuesday, R Programming, Data Visualization, Crime Data]
+tags: [ggplot2, data-visualization, tidyverse, Crime Data]
 image: ""
 editor_options: 
   chunk_output_type: inline
