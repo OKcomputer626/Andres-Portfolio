@@ -102,6 +102,14 @@ california <- agencies %>%
   count(is_nibrs) %>%
   ungroup()
 
+# Calculate the percentage of agencies reporting to NIBRS in California
+perc <- california %>%
+  group_by(is_nibrs) %>%
+  summarise(count = sum(n)) %>%
+  mutate(proportion = round(count / sum(count) * 100, 1)) %>%
+  ungroup() %>%
+  pull(proportion)
+  
 # Merge California county map data with agency data
 california <- ca_counties %>%
   left_join(california, by = join_by(subregion == county))
@@ -126,6 +134,9 @@ st <- "The FBI Crime Data Explorer provides access to crime data from\nlaw enfor
 
 # Highlight key insight about agency participation in Los Angeles County
 text <- "Los Angeles County has the highest number\nof agencies participating in NIBRS, with a total of 61."
+
+# Generate the formatted text
+cal_perc <- glue("In California, {perc[2]}% of agencies report to NIBRS, while {perc[1]}% do not.")
 
 # Generate a social media caption with custom colors and font styling
 social <- andresutils::social_caption(font_family = font, icon_color = "#b2d8ee", bg_color = "gray10", font_color = "white") 
@@ -167,7 +178,8 @@ p1 <- ggdraw(p) +
   draw_text(text = "Number of Agencies", color = "white", x = 0.09, y = 0.2, size = 21, family = font, fontface = "bold", angle = 90) +
   draw_text(text = text, x = 0.43, y = 0.12, color = "white", family = font) +
   annotate("curve", x = 0.45, y = 0.14, xend = 0.57, yend = 0.21, color = "white", curvature = -0.2, linewidth = 0.7, arrow = arrow(length = unit(0.4, 'cm'))) +
-  draw_text(text = st, x = 0.72, y = 0.82, color = "white", family = font)
+  draw_text(text = st, x = 0.72, y = 0.82, color = "white", family = font) +
+  draw_text(text = cal_perc, x= 0.68, y = 0.5, color = "white", family = font, angle = -45, size = 18)
 ```
 
 #### 7. 💾 Save
