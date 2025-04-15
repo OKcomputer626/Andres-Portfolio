@@ -1,0 +1,218 @@
+---
+title: "Base R Penguins"
+description: "Visualizing penguin body mass distributions across species (Adelie, Chinstrap, Gentoo) and gender, using data collected from Antarctic islands between 2007-2009."
+lightbox: true
+date: April 15, 2025
+categories: [TidyTuesday, R Programming, Data Visualization]
+tags: [ggplot2, data-visualization, tidyverse]
+image: "tt_15_2025.png"
+editor_options: 
+  chunk_output_type: inline
+---
+
+![This ggplot visualization uses ggbeeswarm to show the distribution of penguin body mass across three species (Adelie, Chinstrap, Gentoo), with quasirandom points colored by sex (male, female, NA) to reveal patterns while avoiding overplotting, featuring median labels for key comparisons.](tt_15_2025.png){#fig-1}
+
+### <mark> **How This Graphic Was Made** </mark>
+
+#### 1. 📦 Load Packages & Setup
+
+```{r}
+#| label: load
+#| warning: false
+#| message: false
+#| results: hide
+
+
+# Load necessary packages using pacman for easier dependency management
+pacman::p_load(
+  tidyverse,   # Collection of R packages for data science (ggplot2, dplyr, etc.)
+  showtext,    # Enables custom fonts for ggplot2
+  ggtext,      # Adds rich text formatting to ggplot2
+  skimr,       # Provides summary statistics in a readable format
+  ggbeeswarm,  # Creates quasirandom point distributions to avoid overplotting
+  glue         # Interpolates strings/variables for dynamic text generation
+)
+
+# Add Google fonts
+font_add_google("Roboto Condensed", family = "Roboto")
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+#### 2. 📖 Read in the Data
+
+```{r}
+#| label: read
+#| include: true
+#| eval: true
+#| warning: false
+
+# Load the TidyTuesday data
+penguins <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-15/penguins.csv')
+penguins_raw <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2025/2025-04-15/penguins_raw.csv')
+```
+
+#### 3. 🕵️ Examine the Data
+
+```{r}
+#| label: examine
+#| include: true
+#| eval: true
+#| results: hide
+#| warning: false
+
+# Display the structure of the agencies dataset, including column types and sample values
+glimpse(penguins)
+
+# Generate a detailed summary of the agencies dataset, including distribution and missing values
+skim(penguins)
+```
+
+#### 4. 🤼 Wrangle Data
+
+```{r}
+#| label: wrangle
+#| warning: false
+#| results: hide
+
+# Check unique species values
+unique(penguins$species)
+
+# Clean sex column and rename to Gender
+penguins <- penguins %>%
+  mutate(Gender = str_to_title(sex)) %>%
+  select(-sex)
+
+# Calculate median body mass by species
+median <- penguins %>%
+  group_by(species) %>%
+  summarise(body_mass = median(body_mass, na.rm = TRUE)) %>%
+  ungroup()
+```
+
+#### 5. 🔤 Text
+
+```{r}
+#| label: text
+#| include: true
+#| warning: false
+
+# Define the main title for the visualization
+title <- "Body Mass Variation in Penguin Species"
+
+# Create a short description of the dataset focus
+st <- "Data collected from Biscoe Dream and Torgersen Islands between 2007 and 2009"
+
+# Generate a social media caption with custom colors and font styling
+social <- andresutils::social_caption(font_family = "Roboto", icon_color = "#023047") 
+
+# Construct the final plot caption with TidyTuesday details, data source, and social caption
+cap <- paste0(
+  "#TidyTuesday: Week 15, 2025 | **Source**: palmerpenguins R package | **Graphic**: ", social
+)
+```
+
+#### 6. 📊 Plot
+
+```{r}
+#| label: plot
+#| warning: false
+
+# Create base ggplot with species vs body mass mapping
+p <- penguins %>%
+  ggplot(aes(x = body_mass, y = species)) +
+  geom_quasirandom(aes(color = Gender),
+                   size = 2.3,
+                   width = 0.35,
+                   alpha = 0.8) +
+  geom_quasirandom(
+    aes(color = Gender),
+    size = 2.3,
+    width = 0.35,
+    shape = 1,
+    color = "black",
+    stroke = 0.2
+  ) +
+  geom_crossbar(
+    data = median,
+    aes(xmin = body_mass, xmax = body_mass),
+    size = 0.70,
+    col = "#495057",
+    width = .65
+  ) +
+  geom_text(
+    data = median %>% filter(!species %in% "Gentoo"),
+    aes(label = scales::comma(body_mass)),
+    size = 3.2,
+    vjust = -6.7,
+    family = "Roboto"
+  ) +
+  geom_text(
+    data = median %>% filter(species == "Gentoo"),
+    aes(label = glue::glue("Median: {scales::comma(body_mass)}")),
+    size = 3.2,
+    vjust = -6.7,
+    family = "Roboto"
+  ) +
+  scale_color_manual(values = c("#c90076", "#2986cc", "#cccccc")) +
+  scale_x_continuous(labels = scales::comma) +
+  labs(
+    title = title,
+    subtitle = st,
+    caption = cap,
+    x = "Body Mass",
+    y = NULL
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(family = "Roboto"),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(size = 11),
+    legend.position = "top",
+    legend.justification = "left",
+    legend.location = "plot",
+    axis.title.x = element_text(size = 11),
+    axis.text.y = element_text(color = "black", size = 12),
+    axis.text.x = element_text(size = 10),
+    legend.text = element_text(size = 11),
+    legend.title = element_text(size = 11),
+    plot.caption.position = "plot",
+    plot.caption = element_textbox_simple(size = 6.5, margin = margin(t = 5)),
+    plot.margin = margin(10, 10, 10, 10),
+    panel.grid = element_line(size = .35),
+    panel.grid.major.y = element_line(linetype = "dotted", size = .65),
+    plot.background = element_rect(fill = "#ffffff", color = "#ffffff")
+  )
+```
+
+#### 7. 💾 Save
+
+```{r}
+#| label: save
+#| warning: false
+
+# Save the plot for TidyTuesday 2025, Week 15 with specified dimensions.
+andresutils::save_plot(p, type = "tidytuesday", year = 2025, week = 15, width = 6, height = 7)
+```
+
+#### 8. 🚀 GitHub Repository
+
+::: {.callout-tip collapse="true"}
+##### Expand for GitHub Repo
+
+The complete code for this analysis is available in [`tt_15_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/Week_15/tt_15_2025.qmd).
+
+For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
+:::
+
+
+
+

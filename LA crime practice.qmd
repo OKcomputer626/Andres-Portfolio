@@ -1,0 +1,119 @@
+---
+title: "LA Crime"
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(ggtext)
+library(showtext)
+library(skimr)
+library(janitor)
+library(sf)
+library(glue)
+library(cowplot)
+```
+
+```{r}
+# Add Google fonts
+font_add_google("Roboto Condensed", family = "Roboto")
+font <- "Roboto"
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+```{r}
+# Read data
+df <- read_csv("Data/Crime_Data_from_2020_to_Present_20250224.csv")
+```
+
+```{r}
+# Examine the data
+summary(df)
+skim(df)
+
+# Wrangle/Clean data
+df_clean <- df %>%
+  clean_names()
+
+df_clean <- df_clean %>%
+  drop_na(dr_no) %>%
+  mutate(date_occ = date(mdy_hms(date_occ)),
+         month = month(date_occ),
+         year = year(date_occ),
+         time_of_day = case_when(
+           between(time_occ, "0400", "1159") ~ "Morning",
+           between(time_occ, "1200", "1959") ~ "Afternoon/Evening",
+           TRUE ~ "Night"
+         )) %>%
+  select(dr_no, month, year, area_name, time_of_day, crm_cd_desc, status_desc, lat, lon)
+
+df_crime <- st_as_sf(df_clean, coords = c("lon", "lat"), crs = 4326)
+
+df_crime_nopoint <- df_clean %>%
+  select(-c(lat, lon))
+
+la_divisions <- st_read("Data/LAPD Divisions/LAPD_Divisions.shp")
+
+la_divisions <- la_divisions %>%
+  st_transform(la_divisions, crs = 4326) %>%
+  mutate(APREC = str_to_title(APREC),
+         APREC = case_when(
+           APREC == "North Hollywood" ~ "N Hollywood",
+           APREC == "West Los Angeles" ~ "West LA",
+           TRUE ~ APREC
+         ))
+
+la_crime_map <- left_join(la_divisions, df_crime_nopoint,
+                          by = c("APREC" = "area_name")) 
+```
+
+```{r}
+color <- "#4169E1"
+
+# Generate a social media caption with custom colors and font styling
+social <- andresutils::social_caption(font_family = font, icon_color = color, font_color = "grey40", bg_color = "#ffffff") 
+
+# Construct the final plot caption with TidyTuesday details, data source, and social caption
+cap <- paste0(
+  "**Source**: data.lacity.org | **Graphic**: ", social
+)
+
+df_crime_nopoint %>%
+  group_by(crm_cd_desc) %>%
+  count() %>%
+  ungroup() %>%
+  mutate(crm_cd_desc = str_to_title(crm_cd_desc)) %>%
+  slice_max(n, n = 10) %>%
+  ggplot(aes(x = reorder(crm_cd_desc, n), y = n)) +
+  geom_bar(stat = "identity", fill = color, width = 0.8) +
+  geom_text(aes(y = 1500, label = scales::label_number(scale = 1e-3, accuracy = 0.1)(n)), hjust = 0, family = font, size = 3.2, color = "white") +
+  geom_rect(xmin = 11.45, xmax = 12.01, ymin = -4500, ymax = 9200, fill = color) +
+  labs(
+    title = "Top Reported Crime Categories in <span style='color:white;'>Los Angeles</span> (2020 - Feb 19, 2025)",
+    subtitle = "Vehicle theft leads as the most reported crime. Total reported crimes, in thousands:",
+    caption = cap,
+    x = NULL, y = NULL) +
+  scale_y_continuous(expand = c(0,0)) +
+  coord_flip(clip = "off") +
+  theme_minimal(base_size = 10, base_family = font) +
+  theme(
+    panel.grid = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(hjust = 0),
+    plot.title.position = "plot",
+    plot.title = element_markdown(face = "bold", size = 12),
+    plot.caption.position = "plot",
+    plot.caption = element_markdown(hjust = 0, size = 5.5, color = "grey40")
+  )
+
+ggsave("lol.png", width = 10, height = 4, bg = "#ffffff")
+```
+

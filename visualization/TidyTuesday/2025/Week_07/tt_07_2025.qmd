@@ -1,14 +1,16 @@
 ---
 title: "Agencies from the FBI Crime Data"
-description: ""
+description: "This map shows the number of law enforcement agencies in California that report crime data to the FBI’s National Incident-Based Reporting System (NIBRS)."
 lightbox: true
 date: February 20, 2025
 categories: [TidyTuesday, R Programming, Data Visualization, Crime Data]
 tags: [ggplot2, data-visualization, tidyverse, Crime Data]
-image: ""
+image: "tt_07_2025.png"
 editor_options: 
   chunk_output_type: inline
 ---
+
+![This map was created using ggplot2, cowplot, and other R packages to visualize California's county-level NIBRS participation. The FBI Crime Data was processed by filtering for California, wrangling the data to extract agency counts and proportions, and then joining it with county map data, resulting in 73.7% of agencies reporting to NIBRS, while 26.3% do not. This analysis highlights the extent of NIBRS participation across California, offering a clearer picture of crime data reporting at the county level.](tt_07_2025.png){#fig-1}
 
 ### <mark> **How This Graphic Was Made** </mark>
 
@@ -102,6 +104,14 @@ california <- agencies %>%
   count(is_nibrs) %>%
   ungroup()
 
+# Calculate the percentage of agencies reporting to NIBRS in California
+perc <- california %>%
+  group_by(is_nibrs) %>%
+  summarise(count = sum(n)) %>%
+  mutate(proportion = round(count / sum(count) * 100, 1)) %>%
+  ungroup() %>%
+  pull(proportion)
+  
 # Merge California county map data with agency data
 california <- ca_counties %>%
   left_join(california, by = join_by(subregion == county))
@@ -126,6 +136,9 @@ st <- "The FBI Crime Data Explorer provides access to crime data from\nlaw enfor
 
 # Highlight key insight about agency participation in Los Angeles County
 text <- "Los Angeles County has the highest number\nof agencies participating in NIBRS, with a total of 61."
+
+# Generate the formatted text
+cal_perc <- glue("In California, {perc[2]}% of agencies report to NIBRS, while {perc[1]}% do not.")
 
 # Generate a social media caption with custom colors and font styling
 social <- andresutils::social_caption(font_family = font, icon_color = "#b2d8ee", bg_color = "gray10", font_color = "white") 
@@ -167,7 +180,8 @@ p1 <- ggdraw(p) +
   draw_text(text = "Number of Agencies", color = "white", x = 0.09, y = 0.2, size = 21, family = font, fontface = "bold", angle = 90) +
   draw_text(text = text, x = 0.43, y = 0.12, color = "white", family = font) +
   annotate("curve", x = 0.45, y = 0.14, xend = 0.57, yend = 0.21, color = "white", curvature = -0.2, linewidth = 0.7, arrow = arrow(length = unit(0.4, 'cm'))) +
-  draw_text(text = st, x = 0.72, y = 0.82, color = "white", family = font)
+  draw_text(text = st, x = 0.72, y = 0.82, color = "white", family = font) +
+  draw_text(text = cal_perc, x= 0.68, y = 0.5, color = "white", family = font, angle = -45, size = 18)
 ```
 
 #### 7. 💾 Save
@@ -185,7 +199,7 @@ andresutils::save_plot(p1, type = "tidytuesday", year = 2025, week = 7, width = 
 ::: {.callout-tip collapse="true"}
 ##### Expand for GitHub Repo
 
-The complete code for this analysis is available in [`tt_07_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2024/tt_07_2025.qmd).
+The complete code for this analysis is available in [`tt_07_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/Week_07/tt_07_2025.qmd).
 
 For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
 :::
