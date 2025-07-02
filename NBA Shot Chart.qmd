@@ -1,0 +1,388 @@
+---
+title: "NBA Shot Chart"
+editor: visual
+---
+
+# Load Packages
+
+```{r}
+# Load packages 
+library(tidyverse)
+library(devtools)
+library(duckdb)
+library(DBI)
+library(metR)
+library(ggtext)
+library(showtext)
+library(ggnewscale)
+library(ggimage)
+library(glue)
+```
+
+# Setup 
+
+```{r}
+load_nba_data <- function(path = getwd(),
+                          seasons = seq(1996, 2024),
+                          data = c("datanba", "nbastats", "pbpstats", "shotdetail", 
+                                   "cdnnba", "nbastatsv3", "matchups"),
+                          seasontype = 'rg',
+                          league = 'nba',
+                          in_memory = FALSE,
+                          untar = FALSE){
+  
+  path <- normalizePath(path, mustWork = FALSE)
+  
+  if (length(data) > 1 & in_memory){
+    stop("Parameter in_memory=True available only when loading a single data type")
+  }
+  
+  if(seasontype == 'rg'){
+    df <- expand.grid(data, seasons)
+    need_data <- paste(df$Var1, df$Var2, sep = "_")
+  } else if(seasontype == 'po'){
+    df <- expand.grid(data, 'po', seasons)
+    need_data <- paste(df$Var1, df$Var2, df$Var3, sep = "_")
+  } else {
+    df_rg <- expand.grid(data, seasons)
+    df_po <- expand.grid(data, 'po', seasons)
+    need_data <- c(paste(df_rg$Var1, df_rg$Var2, sep = "_"), paste(df_po$Var1, df_po$Var2, df_po$Var3, sep = "_"))
+  }
+  if(tolower(league) == 'wnba'){
+    need_data <- sapply(need_data, function(x){paste0('wnba_', x)}, USE.NAMES = FALSE)
+  }
+  temp <- tempfile()
+  download.file("https://raw.githubusercontent.com/shufinskiy/nba_data/main/list_data.txt", temp)
+  f <- readLines(temp)
+  unlink(temp)
+  v <- unlist(strsplit(f, "="))
+  name_v <- v[seq(1, length(v), 2)]
+  element_v <- v[seq(2, length(v), 2)]
+  need_name <- name_v[which(name_v %in% need_data)]
+  need_element <- element_v[which(name_v %in% need_data)]
+  
+  if(!dir.exists(path)){
+    dir.create(path)
+  }
+  if (in_memory){
+    df <- data.frame()
+  }
+  for(i in seq_along(need_element)){
+    if (in_memory){
+      temp_file <- tempfile(fileext = ".tar.xz")
+      download.file(need_element[i], destfile = temp_file, mode = "wb")
+      temp_dir <- tempdir()
+      temp_csv <- tempfile(fileext = ".csv", tmpdir = temp_dir)
+      untar(temp_file, exdir = temp_dir, files = paste0(
+        gsub(".tar.xz", "", basename(need_element[i])),".csv"
+      ))
+      csv_file <- list.files(temp_dir, pattern = "\\.csv$", full.names = TRUE)
+      if (length(csv_file) > 0) {
+        tmp_df <- read.csv(csv_file)
+        df <- rbind(df, tmp_df)
+      } else {
+        stop("No CSV file found after extraction.")
+      }
+      
+      unlink(temp_file)
+      unlink(csv_file)
+      unlink(temp_dir)
+    } else {
+      destfile <- paste0(path, '/', need_name[i], ".tar.xz")
+      download.file(need_element[i], destfile = destfile)
+      if(untar){
+        untar(destfile, paste0(need_name[i], ".csv"), exdir = path)
+        unlink(destfile)
+      }
+    }
+  }
+  if (in_memory){
+    return(df)
+  }
+}
+
+# Add Google fonts
+font_add_google("Poppins", family = "Poppins")
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+# Load Data
+
+```{r}
+load_nba_data(path = "data/shotdetail/", 
+              seasons = 2024,  
+              data = "shotdetail", 
+              untar = TRUE)
+
+source_url("https://github.com/Henryjean/NBA-Court/blob/main/CourtDimensions.R?raw=TRUE")
+```
+
+```{r}
+# Set DuckDB connection
+con <- dbConnect(duckdb())
+
+# Read in relevant data (change to wherever you saved the data)
+df <- dbGetQuery(
+  con,
+  paste0("select PLAYER_NAME, LOC_X, LOC_Y, SHOT_DISTANCE, GAME_DATE from read_csv('data/shotdetail/shotdetail_2024.csv') where SHOT_DISTANCE <= 35")
+) 
+```
+
+
+```{r}
+# Reformat x,y location data
+df <- df %>% mutate(locationX = LOC_X / 10 * -1,
+                    locationY = LOC_Y / 10 + hoop_center_y) 
+
+df
+```
+
+
+```{r}
+# Set player of interest and parameters
+player_of_interest <- "Shai Gilgeous-Alexander"
+n <- 300  # contour detail level
+
+# Filter and prepare data
+p1 <- df %>% 
+  filter(PLAYER_NAME == player_of_interest) %>% 
+  select(locationX, locationY)
+
+p2 <- df %>% 
+  filter(PLAYER_NAME != player_of_interest) %>% 
+  select(locationX, locationY)
+
+# Calculate density estimates
+x_rng <- c(-27.5, 27.5)
+y_rng <- c(0, 52)
+
+d2_p1 <- MASS::kde2d(p1$locationX, p1$locationY, h = c(7, 7), n = n, lims = c(x_rng, y_rng))
+d2_p2 <- MASS::kde2d(p2$locationX, p2$locationY, h = c(7, 7), n = n, lims = c(x_rng, y_rng))
+
+# Calculate density difference
+df_diff <- d2_p1
+df_diff$z <- d2_p1$z - d2_p2$z
+
+# add matrix col names
+colnames(df_diff$z) <- df_diff$y
+
+# Prepare data for plotting
+df_diff <- df_diff$z %>% 
+  as_tibble() %>% 
+  mutate(x_coord = df_diff$x) %>% 
+  pivot_longer(-x_coord, names_to = "y_coord", values_to = "z") %>% 
+  mutate(y_coord = as.double(y_coord))
+
+df_negative <- df_diff %>% 
+  filter(z < 0) %>% 
+  mutate(z = abs(z))
+
+df_diff <- df_diff %>% 
+  mutate(z = ifelse(z < 0, 0, z))
+
+
+df_diff
+```
+
+
+
+```{r}
+# Custom ggplot2 theme
+theme_ag <- function (font_size = 9) {
+  theme_minimal(base_size = font_size, base_family = "Poppins") %+replace%
+    theme(
+      plot.background = element_rect(fill = '#FBFBFB', color = "#FBFBFB"),
+      panel.grid.minor = element_blank(),
+      plot.title = element_text(
+        size = 14,
+      ),
+      plot.subtitle = element_markdown(
+        size = 8
+      ),
+      plot.caption = element_markdown(
+        color = 'gray50',
+        margin = margin(0, 5, 5, 0),
+        hjust = 1,
+        size = 6
+      )
+    )
+}
+
+p <- ggplot() +
+  # plot court
+  geom_path(
+    data = court_points,
+    aes(
+      x = x,
+      y = y,
+      group = desc,
+      linetype = dash
+    ),
+    color = "black",
+    linewidth = .4
+  ) +
+  coord_fixed(clip = 'off')
+
+p
+```
+
+
+
+```{r}
+p <- p +
+  # custom theme
+  theme_ag() +
+  # set opacity limits
+  scale_alpha_continuous(range = c(0.4, 1)) +
+  # set y-axis limits
+  scale_y_reverse(limits = c(45, -2.5)) +
+  # set x-axis limits
+  scale_x_reverse(limits = c(30, -30))
+
+p
+```
+
+
+
+```{r}
+p <- p +
+  # first layer
+  geom_raster(data = df_diff %>% filter(z >= mean(z)),
+              aes(
+                x = x_coord,
+                y = y_coord,
+                alpha = sqrt(z),
+                fill = sqrt(z)
+              ))  +
+  stat_contour(
+    data = df_diff %>% filter(z >= mean(z)),
+    aes(
+      x = x_coord,
+      y = y_coord,
+      z = sqrt(z),
+      color = after_stat(level)
+    ),
+    linewidth = .25,
+    bins = 4
+  ) +
+  scale_fill_gradient2(
+    low = '#FBFBFB',
+    mid = '#FBFBFB',
+    high = "#cc0000",
+    trans = 'sqrt'
+  )  +
+  scale_color_gradient2(
+    low = "#FBFBFB",
+    mid = '#FBFBFB',
+    high = "#cc0000",
+    trans = 'sqrt'
+  )
+
+p
+```
+
+
+```{r}
+p <- p +
+  # second layer
+  new_scale_fill() +
+  new_scale_color() +
+  geom_raster(data = df_negative %>% filter(z >= mean(z)),
+              aes(
+                x = x_coord,
+                y = y_coord,
+                alpha = sqrt(z),
+                fill = sqrt(z)
+              ))  +
+  stat_contour(
+    data = df_negative %>% filter(z >= mean(z)),
+    aes(
+      x = x_coord,
+      y = y_coord,
+      z = sqrt(z),
+      color = after_stat(level)
+    ),
+    linewidth = .25,
+    bins = 4
+  ) +
+  scale_fill_gradient2(
+    low = "#FBFBFB",
+    mid = "#FBFBFB",
+    high = "#aaaaaa",
+    trans = 'sqrt'
+  ) +
+  scale_color_gradient2(
+    low = "#FBFBFB",
+    mid = "#FBFBFB",
+    high = "#aaaaaa",
+    trans = 'sqrt'
+  )
+
+p
+```
+
+
+
+```{r}
+transparent <- function(img) {
+  magick::image_fx(img, expression = "0.5*a", channel = "alpha")
+}
+
+# Create a social media caption with customized colors and font for consistency in visualization
+social <- andresutils::social_caption(font_family = "Poppins", icon_color = "black",font_color = "gray50") 
+
+# Construct the final plot caption by combining TidyTuesday details, data source, and the social caption
+cap <- paste0(
+  "**Source**: stats.nba.com | **Graphic**: ", social, "| Inspired by Owen Phillips"
+)
+
+
+lol <- p +
+  geom_image(
+    aes(x = 25, y = 40, image = "img/NBA/Team/Oklahoma_City_Thunder.svg.webp"),
+    image_fun = transparent,
+    size = 0.25
+  ) +
+  geom_image(aes(x = 20, y = 40, image = "img/NBA/Shai Gilgeous-Alexander.webp"),
+             size = 0.35) +
+  annotate(
+    "text",
+    x = 15,
+    y = 40,
+    hjust = 0,
+    size = 7,
+    lineheight = 0.8,
+    label = "#2\nShai\nGilgeous-Alexander",
+    family = "Poppins",
+    fontface = "bold"
+  ) +
+  # theme tweaks
+  theme(
+    plot.margin = margin(0, 0, 0, 0),
+    legend.position = 'none',
+    line = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    plot.title = element_text(
+      face = 'bold',
+      family = "Poppins",
+      margin = margin(b = 5)
+    )
+  ) +
+  labs(title = toupper("Shot Frequency Relative to League Average"),
+       subtitle = "2024-25 Regular Season | <span style='color:#cc0000;'>**MORE**</span> Frequent and <span style='color:#aaaaaa;'>**LESS**</span> Frequent Zones - Darker areas indicate stronger tendencies (<span style='color:#cc0000;'>**more**</span>/<span style='color:#aaaaaa;'>**less**</span> extreme)",
+       caption = cap)
+
+ggsave("lol2.png", height = 7, width = 8)
+```
+
+

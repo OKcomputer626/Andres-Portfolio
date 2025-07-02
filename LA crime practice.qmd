@@ -116,4 +116,3 @@ df_crime_nopoint %>%
 
 ggsave("lol.png", width = 10, height = 4, bg = "#ffffff")
 ```
-
