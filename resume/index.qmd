@@ -1,6 +1,5 @@
 ---
 layout: page
-title: Resume
 excerpt: My current Resume
 comments: false
 execute:
@@ -30,11 +29,18 @@ resume:
 ```
 
 ```{=html}
+<!-- Added spacing above -->
+<div style="margin-top: 30px;"></div>
+
 <p class="text-center">
   <a class="btn btn-primary btn-lg resume-download" href="`r rmarkdown::metadata$resume$pdf`" target="_blank">
-    <i class="fa-solid fa-file-arrow-down"></i>&ensp;Download current Resume
+    <i class="fa-solid fa-file-arrow-down"></i>&ensp;Download Current Resume
   </a>
 </p>
+
+<!-- Existing spacing between button and iframe -->
+<div style="margin-top: 25px;"></div>
+
 <div class="embed-container">
   <iframe src="`r rmarkdown::metadata$resume$pdf`#toolbar=0" style="border: 0.5px"></iframe>
 </div>
