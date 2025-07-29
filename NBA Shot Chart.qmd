@@ -19,7 +19,7 @@ library(ggimage)
 library(glue)
 ```
 
-# Setup 
+# Setup
 
 ```{r}
 load_nba_data <- function(path = getwd(),
@@ -135,7 +135,6 @@ df <- dbGetQuery(
 ) 
 ```
 
-
 ```{r}
 # Reformat x,y location data
 df <- df %>% mutate(locationX = LOC_X / 10 * -1,
@@ -143,7 +142,6 @@ df <- df %>% mutate(locationX = LOC_X / 10 * -1,
 
 df
 ```
-
 
 ```{r}
 # Set player of interest and parameters
@@ -191,8 +189,6 @@ df_diff <- df_diff %>%
 df_diff
 ```
 
-
-
 ```{r}
 # Custom ggplot2 theme
 theme_ag <- function (font_size = 9) {
@@ -233,8 +229,6 @@ p <- ggplot() +
 p
 ```
 
-
-
 ```{r}
 p <- p +
   # custom theme
@@ -248,8 +242,6 @@ p <- p +
 
 p
 ```
-
-
 
 ```{r}
 p <- p +
@@ -287,7 +279,6 @@ p <- p +
 
 p
 ```
-
 
 ```{r}
 p <- p +
@@ -327,8 +318,6 @@ p <- p +
 
 p
 ```
-
-
 
 ```{r}
 transparent <- function(img) {
@@ -384,5 +373,3 @@ lol <- p +
 
 ggsave("lol2.png", height = 7, width = 8)
 ```
-
-
