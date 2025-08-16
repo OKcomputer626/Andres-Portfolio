@@ -1,92 +1,91 @@
-authorname: "Andres Gonzalez"
-
-project:
+project: 
   type: website
-
-  preview: 
-    port: 3751
-    browser: true
-    watch-inputs: true
-    navigate: true
-
-title-meta: "Andres Gonzalez"
-description-meta: "Data Scientist & Statistician | Master's in Applied Statistics | Specializing in Bayesian Methods, Sports Analytics, and Crime Analytics"
-
-website:
+  
+website: 
   title: "Andres Gonzalez"
-  description: "Data Scientist & Statistician | Master's in Applied Statistics | Specializing in Bayesian Methods, Sports Analytics, and Crime Analytics"
-  site-url: https://andresgonzalezstats.com/
-  image: img/Andres_Gonzalez.png
+  site-url: "https://andresgonzalezstats.com/"
+  description: "Insights and projects in data analysis, biostatistics, and applied statistics."
+  favicon: img/favicon.ico
+  page-navigation: true
   back-to-top-navigation: true
-  
-  repo-url: "https://github.com/OKcomputer626/Andres-Portfolio"
-  repo-branch: master
-  
-  search: 
-    location: navbar
-    type: textbox
-  
+  twitter-card:
+    creator: "@AndresAnalytics"
+    site: "@AndresAnalytics"
+    card-style: summary_large_image
+  comments: 
+    utterances: 
+      repo: OKcomputer626/Andres-Portfolio
+      label: "comments"
+      theme: github-light
+      issue-term: pathname
+      
   navbar:
-    pinned: true
-    logo: /img/data.png
-    left:
+    logo: img/data.png
+    tools:
+    - icon: github
+    href: https://github.com/OKcomputer626
+    right: 
+      - text: About
+        aria-label: "About Me"
+        href: about/index.qmd
       - text: Blog
+        aria-label: "Read blog posts"
         href: blog/index.qmd
       - text: Visualization
+        aria-label: "Data visualization projects"
         href: visualization/index.qmd
-      - text: Resume
-        href: resume/index.qmd
+      - text: Projects
+        aria-label: "Project Portfolio"
+        href: project/index.qmd
       - text: Spotify
+        aria-label: "My Spotify"
         href: Spotify/index.qmd
-    right:
-      - icon: twitter-x
-        href: https://twitter.com/AndresAnalytics
-      - icon: github
-        href: https://github.com/OKcomputer626
-      - icon: linkedin
-        href: https://linkedin.com/in/andresgonzalez26
-      - icon: envelope
-        aria-label: email
-        href: "mailto:gonzalez.andrespsg@gmail.com"
-  
-  favicon: img/favicon.ico
-  
-  twitter-card: 
-    creator: "@AndresAnalytics"
-    image: "/img/Andres_Gonzalez.png"
-    
-  open-graph: 
-    image: "/img/Andres_Gonzalez.png"
-    locale: en_US
-    
-  google-analytics: "G-MDSNGGTV5L"
-  
-  page-footer:
-    left: |
-      <span class="faux-block">{{< fa brands creative-commons >}} 2024 Andres Gonzalez</span>
-      <span class="faux-block">All content licensed under<br>[{{< fa brands creative-commons >}} {{< fa brands creative-commons-by >}} Creative Commons CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)</span> 
-    right: |
-      <span class="faux-block">Made with {{< fa brands r-project >}} and [Quarto](https://quarto.org/)</span>
-      <span class="faux-block"><a href="https://github.com/OKcomputer626/Andres-Portfolio">View the source at {{< fa brands github >}} GitHub</a></span>
-  
-execute:
-  freeze: true
-  
-filters:
-  - html/newpagelink.lua
+        
+  page-footer: 
+    left: >-
+      &#169; 2025 Andres Gonzalez &#8729; Made with [Quarto](https://quarto.org)
+    center: |
+      <a class="link-dark me-1" href="/accessibility.html" title="Accessibility commitment" target="_blank" rel="noopener">{{< fa universal-access >}}</a>
+      <a class="link-dark me-1" href="https://bsky.app/profile/andresanalytics.bsky.social" title="Bluesky" target="_blank" rel="noopener">{{< fa brands bluesky >}}</a>
+      <a class="link-dark me-1" href="https://www.linkedin.com/in/andresgonzalez26/" title="LinkedIn" target="_blank" rel="noopener">{{< fa brands linkedin >}}</a>
+      <a class="link-dark me-1" href="https://github.com/OKcomputer626" title="github" target="_blank" rel="noopener">{{< fa brands github >}}</a>
+      
+    right: 
+      - text: "Accessibility"
+        aria-label: "Accessibility Commitment"
+        href: accessibility.qmd
+      - text: "Contact"
+        aria-label: "Contact Form"
+        href: contact.qmd
+      - text: "License"
+        aria-label: "License Details"
+        href: license.qmd
 
-format:
-  html:
-    include-in-header: html/seo.html
-    fontsize: 1.1em
+execute:
+  freeze: auto
+
+format: 
+  html: 
     theme: 
-      - flatly
-      - html/styles.scss
-    toc: false
-    grid: 
-      body-width: 900px
-    anchor-sections: true
-    fig-cap-location: margin
-    reference-location: margin
-    footnotes-hover: true
-    highlight-style: monokai
+      light: 
+        - cosmo
+        - assets/andres-theme-light.scss
+        - assets/andres/colors-light.scss
+        - assets/andres/fonts.scss
+      dark: 
+        - cosmo
+        - assets/andres-theme-dark.scss
+        - assets/andres/colors-dark.scss
+    highlight-style: 
+      light: assets/andres/a11y-light.theme
+      dark: assets/andres/a11y-light.theme
+    code-link: true
+    pagetitle: "{{< meta title >}}"
+    lightbox: true
+
+include-in-header: assets/andres/umami.html
+  
+      
+   
+
+    

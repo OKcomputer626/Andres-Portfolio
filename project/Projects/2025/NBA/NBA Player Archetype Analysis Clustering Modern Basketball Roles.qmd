@@ -1,0 +1,1086 @@
+---
+title: "NBA Player Archetype Analysis: Clustering Modern Basketball Roles"
+subtitle: "Identifies five data-driven NBA player archetypes using PCA and K-Means clustering to reveal how players contribute beyond traditional positions, from versatile contributors to efficient finishers and perimeter shooters."
+number-sections: false
+date: June 27, 2025
+image: featured.jpg
+categories: 
+  - R
+  - Classification 
+  - Machine Learning
+  - Basketball
+format:
+  html:
+    fig-cap-location: bottom
+    lightbox: true      # moved here so Quarto reliably picks it up
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+
+```{r}
+#| include: false
+
+# Load packages 
+library(tidyverse)
+library(nbastatR)
+library(showtext)
+library(ggtext)
+library(glue)
+library(factoextra)
+library(patchwork)
+library(ggsci)
+library(ggfortify)
+library(gghighlight)
+library(ggrepel)
+library(scales)
+library(knitr)
+library(kableExtra)
+library(reactable)
+```
+
+```{r}
+#| include: false
+
+# Add Google fonts
+font_add_google("Oswald", family = "Oswald")
+font_add_google("Roboto", family = "Roboto")
+font <- "Oswald"
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+```{r}
+#| include: false
+
+Sys.setenv("VROOM_CONNECTION_SIZE" = 131072 * 2)
+
+# Create visualization
+gamedata <- game_logs(seasons = 2025)
+```
+
+```{r}
+#| include: false
+
+# Generate a social media caption with custom colors and font styling
+social <- andresutils::social_caption(font_family = font, icon_color = "#007FFF") 
+
+# Construct the final plot caption with TidyTuesday details, data source, and social caption
+cap <- paste0(
+  "**Source**: NBA Stats API | **Graphic**: ", social
+)
+```
+
+# Introduction
+
+The 2024–25 NBA season showcases basketball’s accelerating evolution beyond traditional positions. As 7-foot centers anchor offenses from the three-point line and 6'8" point guards orchestrate pick-and-rolls, conventional labels like “point guard” or “center” increasingly fail to capture players’ actual on-court impact. This positional revolution demands new analytical frameworks that reflect how players contribute rather than where they’re listed on depth charts.
+
+To better understand the game’s fluidity, this analysis uses Principal Component Analysis (PCA) and K-Means clustering to group players based on statistical profiles rather than positional assumptions. PCA reduces complex, high-dimensional performance data into interpretable axes of variation — such as scoring efficiency vs. usage, or interior vs. perimeter tendencies — while K-Means identifies natural groupings of player archetypes within that space. Together, these methods provide a clearer lens for evaluating how NBA players truly shape the game in 2024–25.
+
+## Analytical Approach: Skill-Based Taxonomy
+
+We confront this paradigm shift through a two-stage statistical methodology:
+
+1.  **Dimensionality Reduction via PCA**\
+    Condenses 13 core performance metrics into fundamental skill dimensions: $$\small{\text{PC}_k = \sum_{j=1}^{p} w_{kj}X_j}$$ Where $\text{PC}_k$ represents orthogonal basketball competencies (shooting, creation, defense)
+
+2.  **Unsupervised Clustering via K-means**\
+    Groups players by skill similarity through variance minimization: $$\small{\underset{\mathcal{C}}{\arg\min} \sum_{i=1}^{k} \sum_{x \in C_i} \lVert x - \mu_i \rVert^2}$$ Identifying natural groupings without positional preconceptions
+
+**Core Objective**:\
+Identify true player archetypes in the 2024-25 season and pinpoint undervalued talent where:\
+$$\small\underbrace{\text{Statistical Impact}}_{\text{Archetype Value}} > \underbrace{\text{Market Perception}}_{\text{Contract/Salaries}}$$
+
+## Why Skill-Based Analysis Matters
+
+Front offices require analytical frameworks that:
+
+-   **Replace legacy positions** with role-based skill profiles
+-   **Quantify hidden value** beyond box score statistics
+-   **Exploit market inefficiencies** in roster construction
+-   **Optimize lineups** through complementary skill pairings
+
+# Data
+
+Player statistics were programmatically collected from the NBA's official statistics database ([NBA.com/stats](https://www.nba.com/stats)) using the `nbastatR` R package.
+The dataset encompasses:
+
+-   **Season Coverage**: Complete 2024-25 regular season (October 22, 2024 - April 13, 2025)
+-   **Collection Scope**: All player-game observations for rotation players
+-   **Automation**: Scripted daily updates via NBA API
+
+## Raw Dataset Structure
+
+-   **Observations**: 26,306 player-game entries
+-   **Variables**: 58 metrics spanning four key dimensions
+
+The 58 variables span four critical basketball dimensions:
+
+$$
+\begin{bmatrix}
+\text{Game Context} & \text{Player Metadata} & \text{Shooting Splits} & \text{Box Score Metrics} \\
+\color{#6c757d}{\small\text{(date, matchup)}} & \color{#6c757d}{\small\text{(name, ID, position)}} & \color{#6c757d}{\small\text{(FG2M/A, FG3M/A, FTM/A)}} & \color{#6c757d}{\small\text{(PTS, REB, AST, STL, BLK, TOV)}}
+\end{bmatrix}
+$$
+
+## From Game Logs to Player Profiles
+
+To analyze player performance at a season level, the raw game-level dataset was aggregated into player-season statistics using `dplyr` in R. This transformation condenses granular game-by-game performance into interpretable season-level metrics, enabling player profiling and clustering analyses.
+
+```{r}
+#| warning: false
+
+players <- gamedata %>%
+  group_by(namePlayer, idPlayer) %>%
+  summarise(
+    total_minutes = sum(minutes),        # Total minutes played
+    avg_minutes = mean(minutes),         # Average minutes per game
+    
+    # Shooting efficiency (season totals)
+    pctfg3 = sum(fg3m) / sum(fg3a),     # 3PT% (∑makes / ∑attempts)
+    pctfg2 = sum(fg2m) / sum(fg2a),     # 2PT%
+    pctft = sum(ftm) / sum(fta),        # FT%
+    
+    # Per-game averages
+    fg3a = mean(fg3a),                  # 3PT attempts per game
+    fg2a = mean(fg2a),                  # 2PT attempts per game
+    fta = mean(fta),                    # FT attempts per game
+    oreb = mean(oreb),                  # Offensive rebounds
+    dreb = mean(dreb),                  # Defensive rebounds
+    ast = mean(ast),                    # Assists
+    stl = mean(stl),                    # Steals
+    blk = mean(blk),                    # Blocks
+    tov = mean(tov),                    # Turnovers
+    pts = mean(pts)                     # Points
+  ) %>%
+  ungroup()
+```
+
+These aggregated profiles form the foundation for subsequent PCA and clustering analyses to identify distinct player archetypes.
+
+## Key Engineering Decisions
+
+### Shooting Efficiency Calculation
+
+Uses season totals rather than game averages:\
+$$
+\text{pctfg3} = \frac{\sum \text{fg3m}}{\sum \text{fg3a}}
+$$
+
+**Why?** More stable than $\text{mean(pctFG3)}$ which overweights outlier games.
+
+### Rebound Separation
+
+Distinct `oreb` (offensive) and `dreb` (defensive) instead of total rebounds:
+
+-   `oreb` → Second-chance creation\
+-   `dreb` → Defensive cleanup
+
+### Shot Spectrum
+
+Separate tracking of perimeter and interior attempts:
+
+-   **Perimeter:** `fg3a` (3PT attempts)\
+-   **Interior:** `fg2a` (2PT attempts)
+
+## Player Minutes Distribution
+
+The histogram below in @fig-histogram shows the distribution of `total_minutes` played during the 2024-25 NBA season:
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-histogram
+#| fig-cap: "Histogram"
+
+median_total_minutes <- median(players$total_minutes)
+mean_total_minutes <- mean(players$total_minutes)
+
+players %>%
+  ggplot(aes(x = total_minutes)) +
+  geom_histogram(fill = "#007FFF",
+                 color = "#e9ecef",
+                 alpha = 0.9) +
+  scale_x_continuous(breaks = seq(0, 3000, 500)) +
+  labs(
+    title = "Distribution of Total Minutes Played in a Season",
+    caption = cap,
+    x = "Total Minutes",
+    y = "Frequency"
+  ) +
+  geom_vline(
+    xintercept = median_total_minutes,
+    linetype = "dashed",
+    color = "#FDDA0D",
+    linewidth = 1
+  ) +
+  annotate(
+    "label",
+    x = 2000,
+    y = 38,
+    label = paste0(
+      "Median: ",
+      round(median_total_minutes, 1),
+      " Minutes\n",
+      "Mean: ",
+      round(mean_total_minutes, 1),
+      " Minutes"
+    ),
+    family = "Roboto",
+    size = 2.2,
+    lineheight = 1.5
+  ) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    plot.caption = element_markdown(size = 4.5
+    )
+  )
+```
+
+### Distribution Characteristics
+
+The histogram in @fig-histogram reveals a **right-skewed distribution** of total minutes played:
+
+-   **Median**: $908$ minutes\
+-   **Mean**: $1043.5$ minutes\
+-   **Skewness**: $\text{mean} > \text{median}$ indicates positive skew
+
+### Data Preprocessing Pipeline
+
+Based on the minutes distribution and analytical objectives, we implement two key preprocessing steps:
+
+1.  **Player Filtering**:
+    -   Retain only rotation players with ≥900 minutes played\
+    -   Ensures meaningful skill pattern analysis\
+    -   Removes deep bench/garbage time players
+2.  **Feature Selection**:
+    -   Remove `total_minutes` (filtering criterion only)\
+    -   Exclude non-skill columns (player names, IDs, etc.)\
+    -   Retain only performance metrics relevant to archetype analysis
+
+```{r}
+#| echo: false
+#| label: tbl-players
+#| tbl-cap: "Player Table"
+
+players <- players %>% 
+  filter(total_minutes >= 900)
+
+non_shooters <- players %>%
+  filter(if_any(everything(), is.na))
+
+players <- players %>%
+  mutate(pctfg3 = if_else(is.na(pctfg3), 0, pctfg3)) %>%
+  drop_na()
+
+reactable(players,
+          filterable = TRUE,
+          columns = list(
+            namePlayer = colDef(name = "Player Name"),
+            idPlayer = colDef(name = "Player ID"), 
+            total_minutes = colDef(name = "Total Minutes"),
+            avg_minutes = colDef(format = colFormat(digits = 2), name = "MPG"),
+            pctfg3 = colDef(format = colFormat(digits = 2)),
+            pctfg2 = colDef(format = colFormat(digits = 2)),
+            pctft = colDef(format = colFormat(digits = 2)),
+            fg3a = colDef(format = colFormat(digits = 2)),
+            fg2a = colDef(format = colFormat(digits = 2)),
+            fta = colDef(format = colFormat(digits = 2)),
+            oreb = colDef(format = colFormat(digits = 2)),
+            dreb = colDef(format = colFormat(digits = 2)),
+            ast = colDef(format = colFormat(digits = 2)),
+            stl = colDef(format = colFormat(digits = 2)),
+            blk = colDef(format = colFormat(digits = 2)),
+            tov = colDef(format = colFormat(digits = 2)),
+            pts = colDef(format = colFormat(digits = 2))
+            ),
+          defaultColDef = colDef(headerStyle = list(background = "#007FFF", color = "#e9ecef"),
+                                 align = "center",
+                                 minWidth = 140))
+```
+
+
+```{r}
+#| include: false
+
+players <- players %>%
+  select(pctfg3:pts)
+
+# Verify final dimensions
+final_obs <- nrow(players)
+final_vars <- ncol(players)
+```
+
+#### Preprocessing Outcomes
+
+-   **Players retained**: `r final_obs` (rotation players meeting minutes threshold)\
+-   **Features processed**: `r final_vars` (13 skill metrics)\
+-   **Key decisions**:
+    -   Filtered out `r 569 - final_obs` players below minutes threshold\
+    -   Removed `total_minutes` and other non-skill columns\
+    -   Imputed 0% 3PT accuracy for `r sum(is.na(non_shooters$pctfg3))` non-shooters
+
+### Final Feature Set (13 Metrics)
+
+The selected metrics in @tbl-descriptions capture essential basketball skills for archetype analysis:
+
+```{r}
+#| label: tbl-descriptions
+#| echo: false
+#| tbl-cap: "Skill metrics used in player archetype analysis"
+
+features <- tibble(
+  Category = c("Scoring", "Perimeter Game", "Interior Game", "Free Throws",
+               "Rebounding", "Playmaking", "Defense"),
+  Metrics = c(
+    "<code>pts</code>",
+    "<code>fg3a</code>, <code>pctfg3</code>",
+    "<code>fg2a</code>, <code>pctfg2</code>",
+    "<code>fta</code>, <code>pctft</code>",
+    "<code>oreb</code>, <code>dreb</code>",
+    "<code>ast</code>, <code>tov</code>",
+    "<code>stl</code>, <code>blk</code>"
+  ),
+  Description = c(
+    "Total points scored",
+    "3PT attempts and percentage",
+    "2PT attempts and percentage",
+    "FT attempts and percentage",
+    "Offensive/defensive rebounds",
+    "Assists and turnovers",
+    "Steals and blocks"
+  )
+)
+
+
+kbl(features, align = "c", escape = FALSE) %>%
+  kable_styling(full_width = F, bootstrap_options = c("striped", "hover")) %>%
+  row_spec(0, bold = TRUE, color = "#e9ecef", background = "#007FFF")
+```
+
+**Feature Rationale**:
+
+-   Excluded `total_minutes` as it was only used for filtering
+-   Removed non-performance columns to focus analysis on on-court skills
+-   Retained all shooting/rebounding/playmaking/defense metrics for PCA
+-   `pts` included as holistic scoring measure
+
+Our analysis rests on comprehensive performance data in @tbl-data:
+
+```{r}
+#| label: tbl-data
+#| echo: false
+#| tbl-cap: "Dataset Specifications"
+
+tibble(
+  Component = c("Player Pool", "Season Coverage", "Metrics Collected", "Inclusion Criteria"),
+  Details = c("All rotation players", "Oct 2024 - Apr 2025", "13 skill dimensions", "≥900 minutes played"),
+  Count = c("288 players", "82 games", "7 categories", "Excluded 44% of rostered players")
+) %>% 
+  kable(align = "c") %>%
+  row_spec(row = 0, color = "#e9ecef", background = "#007FFF")
+```
+
+### Next Steps: Skill Space Analysis
+
+With the filtered player set and curated features, we proceed to:
+
+1.  Standardize metrics for PCA\
+2.  Reduce dimensionality to core skill components\
+3.  Cluster players by skill similarity
+
+# Principal Component Analysis
+
+## Conceptual Foundation
+
+Principal Component Analysis (PCA) is a dimensionality reduction technique that transforms correlated variables into a set of linearly uncorrelated principal components:
+
+$$\small{\text{PC}_k = w_{k1}X_1 + w_{k2}X_2 + \cdots + w_{kp}X_p}$$
+
+Where:
+- $\text{PC}_k$ = Orthogonal skill dimension
+- $w_{kj}$ = Weight coefficients maximizing variance capture
+- $X_j$ = Original skill metrics (e.g., pts, ast, reb)
+
+For basketball analytics, PCA helps uncover the **underlying skill dimensions** driving player performance.
+
+## The Critical Role of Feature Scaling
+
+Before applying PCA, we standardize all features using z-scores:
+
+$$ z = \frac{x - \mu}{\sigma} $$
+
+### Why Scaling is Essential
+
+- **Equal Metric Influence**: Prevents high-magnitude stats (e.g., points) from dominating lower-scale stats (e.g., block %)
+- **Unit Variance**: Ensures all features contribute equally to total variance
+- **Mean Centering**: Aligns features to a shared origin (μ = 0)
+- **Covariance Stability**: Ensures PCA captures real correlations, not scale artifacts
+
+## PCA Implementation & Results
+
+We applied PCA to the standardized player dataset to extract its core performance dimensions.
+
+### Eigenvalue Analysis
+
+The eigenvalues in @tbl-eigen quantify each component’s explanatory power:
+
+```{r}
+#| echo: false
+#| label: tbl-eigen
+#| tbl-cap: "Principal Component Analysis (PCA) Results: Eigenvalues and Explained Variance"
+
+nba.pca <- prcomp(players, scale = TRUE)
+
+nba.pca.summary <- summary(nba.pca)
+
+eig.val <- get_eigenvalue(nba.pca)
+
+kable(eig.val, digits = 2, col.names = c("Eigenvalue", "Explained Variance (%)", "Cumulative Variance (%)"), align = "c") %>%
+  row_spec(row = 0, color = "#e9ecef", background = "#007FFF")
+```
+
+### Key Findings from Eigenvalue Analysis
+
+1.  **Kaiser Criterion (Eigenvalue \> 1)**:\
+    -   Only **Dim.1 (5.10)** and **Dim.2 (3.60)** exceed the threshold\
+    -   These two components account for **66.91%** of the total variance\
+    -   They represent the core performance dimensions in NBA player data
+2.  **Meaningful Dimensions**:\
+    -   **Dim.3 (0.94)** and **Dim.4 (0.76)** are borderline significant\
+    -   The top four components capture **79.95%** of total variance\
+    -   Together, they provide a more complete picture of performance variation
+3.  **Diminishing Returns**:\
+    -   Components beyond Dim.4 each explain **\<6% variance**\
+    -   Cumulative variance plateaus after **Dim.6 (88.77%)**\
+    -   Components 7–13 likely reflect noise or redundant information
+
+### Interpretation Summary
+
+```{r}
+#| echo: false
+#| label: tbl-pca
+#| tbl-cap: "PCA Summary"
+
+component_summary <- tibble(
+  `Component Range` = c("Core Dimensions (1-2)", 
+                        "Supplementary (3-4)", 
+                        "Marginal (5-13)"),
+  `Variance Captured` = c("66.91%", "13.04%", "20.05%"),
+  `Analytical Value` = c("Essential for analysis", 
+                         "Important context", 
+                         "Limited value")
+)
+
+component_summary %>%
+  kable(align = c("l", "c", "l"), escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), 
+                full_width = FALSE) %>%
+  row_spec(0, background = "#007FFF", color = "#e9ecef", bold = TRUE) %>%
+  column_spec(1, bold = TRUE) %>%
+  add_header_above(c(" " = 1, "PCA Variance Analysis" = 2), 
+                   background = "#C9082A", color = "#e9ecef")
+```
+
+**Strategic Implications**:
+
+- Using the **top 4 components** strikes a strong balance between dimensionality reduction and information retention (79.95%)
+- These components shown in @tbl-pca form the basis for clustering players into data-driven performance archetypes
+- Omitting components beyond Dim.4 avoids overfitting and reduces noise without sacrificing key insights
+
+```{r}
+#| echo: false
+#| label: fig-dimensions
+#| fig-cap: "PCA Scree Plot"
+
+tibble(imp = nba.pca.summary$importance[2, ], n = 1:length(imp)) %>% # get importance scores for PCA summary
+  ggplot(aes(x = n, y = imp)) +
+  geom_col(fill = "#007FFF", color = "#e9ecef") +
+  geom_point(size = 2.2) +
+  geom_line(linewidth = 0.8) +
+  geom_text(aes(label = paste0(round(imp * 100, 2), "%")), vjust = -0.8, size = 2, family = "Roboto") +
+  scale_x_continuous(breaks = seq(1, 20, 1)) + # set x-axis
+  scale_y_continuous(labels = scales::label_percent(), 
+                     expand = c(0,0),
+                     limits = c(0, 0.45)) + # change y-axis from proportion to percentage
+  labs(
+    title = "Less Information is Gained by Each Subsequent PC",
+    x = "Dimensions",
+    y = "Percentage of Explained Variances",
+    caption = cap
+  ) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    plot.caption = element_markdown(size = 4.5)
+  )
+```
+
+This scree plot in @fig-dimensions clearly illustrates how much each principal component contributes to explaining variance in NBA player performance data. The first component (PC1) accounts for 39.23% of variance, likely representing core offensive skills like scoring. PC2 explains 27.68%, probably reflecting secondary skills such as playmaking and defense. Together, these first two components capture 66.91% of the total variance - the majority of what differentiates players. The next two components (PC3 at 7.2% and PC4 at 5.84%) add some additional explanatory power, likely covering specialized skills like three-point shooting. Beyond PC4, each subsequent component contributes less than 4% of variance, with the last few components (PC5-PC10) each explaining less than 3% - essentially statistical noise that doesn't meaningfully impact player evaluation. This pattern shows that NBA teams can effectively analyze players using just the first 2-4 principal components while still capturing nearly 80% of the relevant performance variance, allowing them to focus on the most impactful skills and ignore minor statistical fluctuations.
+
+```{r}
+#| echo: false
+#| label: fig-var
+#| fig-cap: "PCA Metrics Contribution to Principal Components"
+
+fviz_pca_var(
+  nba.pca,
+  col.var = "cos2",
+  # Color by the quality of representation
+  gradient.cols = c("#007FFF", "#57C785", "#EDDD53"),
+  repel = TRUE
+) +
+  labs(caption = cap) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4.5, hjust = 0.5),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+The PCA analysis in @fig-var reveals how different NBA performance metrics contribute to principal components. Three-point shooting variables (fg3a and pctfg3) show strong loadings, reflecting their growing importance in modern basketball. Playmaking and defensive metrics (ast and stl) cluster together, indicating their combined impact on player value. Interior efficiency (pctfg2) emerges as a distinct but less dominant skill dimension. The cosine squared (cos2) values help assess how well each variable is represented in the component space. The first principal component (Dim1) explains 39.2% of total variance and is primarily driven by three-point shooting metrics, with secondary contributions from assists and steals. This pattern confirms the NBA's evolution toward perimeter-oriented skills as the primary differentiator of player value, while still acknowledging the importance of two-way playmaking and defensive abilities.
+
+```{r}
+#| echo: false
+#| label: fig-contributions
+#| fig-cap: "PCA Percentage Contributions"
+
+# Contributions of variables to PC1
+a <- fviz_contrib(nba.pca, choice = "var", axes = 1, fill = "#007FFF", color = "#e9ecef") +
+  labs(x = NULL) +
+  theme_minimal(base_family = font, base_size = 7) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    axis.text.x = element_text(angle = 45)
+  )
+  
+# Contributions of variables to PC2
+b <- fviz_contrib(nba.pca, choice = "var", axes = 2, fill = "#007FFF", color = "#e9ecef") +
+  labs(x = NULL) +
+  theme_minimal(base_family = font, base_size = 7) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    axis.text.x = element_text(angle = 45)
+  )
+
+(a + b) +
+  plot_annotation(title = "Contribution of the Variables to the First Two PCs",
+                  caption = cap,
+                  theme =
+                  theme(
+                    text = element_text(family = font, size = 9),
+                    plot.title = element_text(face = "bold", hjust = 0.5),
+                    plot.caption = element_markdown(size = 4.5),
+                    plot.margin = margin(5, 5, 5, 5),
+                    panel.grid.minor.x = element_blank(),
+                    panel.grid.minor.y = element_blank()
+                  ))
+```
+
+The image in @fig-contributions shows the percentage contributions of different NBA statistics (variables) to the first principal component (Dim-1) in a Principal Component Analysis (PCA). The tallest bars represent the variables that contribute the most to Dim-1, meaning they have the strongest influence in defining this dimension. For example, if "Points Per Game" or "Assists" were labeled, a high contribution would suggest they are key factors driving patterns in the data. Since Dim-2 is not shown, further interpretation (e.g., trade-offs between variables) would require the full graphic.
+
+```{r}
+#| echo: false
+#| label: fig-biplot
+#| fig-cap: "PCA Biplot"
+
+autoplot(
+  nba.pca,
+  loadings = TRUE,
+  loadings.colour = "#007FFF",,
+  loadings.label = TRUE,
+  loadings.label.size = 3,
+  loadings.label.color = "#007FFF",
+  loadings.label.repel = TRUE,
+  color = "grey60"
+) +
+  labs(
+    title = "PCA Biplot of NBA Player Statistics",
+    caption = cap
+  ) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    plot.caption = element_markdown(size = 4.5)
+  )
+```
+
+The PCA biplot in @fig-biplot reveals that **points (pts)**, **assists (ast)**, and **three-point percentage (pctfg3)** are among the most influential variables on the first principal component (PC1), which alone explains **39.23%** of the total variance in the dataset. These variables are commonly associated with offensive creation and scoring efficiency, suggesting that **PC1 likely represents a composite axis of offensive productivity**.
+
+Players located near these vectors are likely to be **high-scoring guards or wings** who contribute efficiently either as shooters or facilitators. In contrast, those closer to variables like **turnovers (tov)** or **two-point attempts (fg2a)** may be more involved in interior play or exhibit less offensive efficiency — potentially high-usage, low-efficiency profiles such as slashing wings or post-heavy bigs.
+
+While PC2 (which explains 27.68% of the variance) is not fully interpreted here, it appears to contrast **perimeter skills** (e.g., `pctft`, `fg3a`) with **interior contributions** (e.g., `blk`, `oreb`, `dreb`), providing a secondary axis of playstyle differentiation. Altogether, the PCA biplot enables a clearer visualization of how players group along performance-based dimensions, setting the stage for unsupervised clustering.
+
+# K-Means Clustering Analysis
+
+## Optimal Cluster Validation
+
+#### 1. Elbow Method
+
+The **Elbow Method** evaluates the total within-cluster sum of squares (WSS) to determine the ideal number of clusters. In this analysis:
+
+- The WSS curve shows **diminishing returns starting at k = 4 or 5**, where adding more clusters yields only marginal variance reduction.
+- **Interpretation**: A **5-cluster solution** balances complexity and interpretability, capturing key groupings without overfitting.
+
+#### 2. Silhouette Method
+
+The **Silhouette Method** measures how well each player fits within its assigned cluster, based on cohesion (how close a player is to others in its cluster) and separation (how far it is from other clusters).
+
+- The average silhouette width peaks at **k = 2-3**, suggesting strong, well-separated groupings at these values.
+- However, despite slightly lower silhouette scores, a **5-cluster solution** remains justifiable due to its richer interpretive granularity — especially in the context of diverse NBA roles and playstyles.
+
+```{r}
+#| echo: false
+#| label: fig-validation
+#| fig-cap: "Optimal Cluster Validation Plot"
+
+# Get PCA scores
+pca_scores <- as_tibble(nba.pca$x[, 1:4])
+
+# Method 1: Elbow plot (within-cluster sum of squares)
+wss <- fviz_nbclust(pca_scores, kmeans, method = "wss", linecolor = "#007FFF") +
+  geom_vline(xintercept = 5, linetype = "dashed", linewidth = 1, color = "#FDDA0D") +  # Check if 7 is good
+  theme_minimal(base_family = font, base_size = 7) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4.5)
+  )
+
+# Method 2: Silhouette width (quality measure)
+silhouette <- fviz_nbclust(pca_scores, kmeans, method = "silhouette", linecolor = "#007FFF") +
+  theme_minimal(base_family = font, base_size = 7) +
+  theme(
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4.5)
+  )
+
+(wss + silhouette) + 
+  plot_annotation(caption = cap,
+                  theme = theme(
+                  text = element_text(family = font),
+                  plot.caption = element_markdown(size = 4.5),
+                  plot.margin = margin(5, 5, 5, 5)))
+```
+
+The 5-cluster solution in @fig-validation, built on the first four principal components (capturing **79.95% of the total variance**), provides both **statistical robustness and basketball insight**. These clusters reveal not only differences in raw production but also **stylistic separation** across player types — such as differentiating **combo guards** who score and create, from **pure playmakers** who facilitate without high usage. Similarly, **stretch bigs** are separated from **rim-protecting traditional centers**, reflecting spacing and interior roles.
+
+Each cluster exhibits a **unique blend of contributions across the four PCA dimensions**, enabling analysts and teams to identify undervalued archetypes, compare similar players across contexts, or scout for specific stylistic needs. This approach highlights how dimensionality reduction and unsupervised learning can uncover the nuanced structure of NBA performance data beyond surface-level stats or listed positions.
+
+## PCA and K-Means Clusters
+
+The figure below in @fig-cluster illustrates the five identified clusters projected onto the first two principal components:
+   
+```{r}
+#| echo: false
+#| label: fig-cluster
+#| fig-cap: "K-Means with 5 Clusters"
+
+colors <- c("#ffd166", "#073b4c", "#118ab2","#ef476f", "#06d6a0")
+
+set.seed(49)
+# re-run K-Means with 5 clusters
+K <- 5
+kmeans5 <- kmeans(pca_scores,
+                  centers = K,
+                  nstart = 22,
+                  iter.max = 30)
+
+pc2 <- as_tibble(nba.pca$x[, 1:2]) # extract first two PCs
+pc2$Cluster <- as.factor(kmeans5$cluster) # add player clusters
+cluster1_var <- round(nba.pca.summary$importance[2, 1], 4) * 100 # get variance explained by cluster 1
+cluster2_var <- round(nba.pca.summary$importance[2, 2], 4) * 100 # get variance explained by cluster 2
+
+# how different are the clusters when scaled down to two dimensions?
+pc2 %>%
+  ggplot(aes(
+    x = PC1,
+    y = PC2,
+    color = Cluster,
+    shape = Cluster
+  )) +
+  geom_point(alpha = 0.5) +
+  scale_color_manual(values = colors) + # fun color scale
+  geom_rug() + # great way to visualize points on a single axis
+  theme_minimal() + stat_ellipse(level = 0.68) + # set ellipse value to one standard deviation
+  scale_shape_manual(values = seq(0, 15)) +
+  labs(
+    x = paste0('PC1 (Accounts for ', cluster1_var, '% of Variance)'),
+    # define cluster 1 % of variance
+    y = paste0('PC2 (Accounts for ', cluster2_var, '% of Variance)'),
+    # define cluster 2 % of variance
+    title = 'Visualizing K-Means Cluster Differences in 2D',
+    caption = cap
+  ) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4.5),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+```
+
+### Interpretation Summary
+
+This PCA plot in @fig-cluster visualizes the five K-Means clusters projected onto the first two principal components:
+
+- **PC1 (x-axis)** explains 39.23% of total variance, representing a dimension largely driven by offensive production and efficiency.
+- **PC2 (y-axis)** explains 27.68% of total variance, capturing a dimension contrasting perimeter-oriented skills with interior-focused contributions.
+
+### Cluster Insights
+
+#### Cluster 1 – *Versatile Contributors*
+Positioned in the lower-left quadrant, indicating players with low offensive efficiency and limited perimeter involvement. Likely traditional bigs or low-usage interior players.
+
+#### Cluster 2 – *Low-Usage Role Players*
+Located in the upper-right quadrant. Represents balanced or efficient scorers with strong perimeter contributions, such as versatile forwards or efficient guards.
+
+#### Cluster 3 – *Perimeter-Oriented Shooters*
+Upper-left quadrant, suggesting high perimeter involvement but lower efficiency. Likely volume shooters or ball-dominant guards with streaky performance.
+
+#### Cluster 4 – *Balanced Average Players*
+Centered slightly to the right, indicating balanced players with moderate efficiency and versatile contributions across roles.
+
+#### Cluster 5 – *Efficient Finishers / Interior Specialists*
+Lower-right quadrant, representing players with high offensive efficiency and strong interior presence, such as efficient finishers or rim-running bigs.
+
+```{r}
+#| include: false
+
+players_scaled <- as_tibble(scale(players))
+
+cluster_centers <- players_scaled %>%
+  group_by(Cluster = kmeans5$cluster) %>%
+  summarise(
+    across(c(pctfg3:pts), 
+           ~ mean(., na.rm = TRUE))
+  ) %>%
+  ungroup() %>%
+  mutate(Cluster = paste("Cluster", row_number())) %>%
+  rename(
+    c(
+      'AST' = 'ast',
+      'BLK' = 'blk',
+      # give predictors a shorter name for plotting
+      'DRB' = 'dreb',
+      '2PA' = 'fg2a',
+      '3PA' = 'fg3a',
+      'FTA' = 'fta',
+      'ORB' = 'oreb',
+      'PTS' = 'pts',
+      'STL' = 'stl',
+      'TOV' = 'tov',
+      'FT%' = 'pctft',
+      '2P%' = 'pctfg2',
+      '3P%' = 'pctfg3'
+    )) %>%
+  pivot_longer(-Cluster, names_to = "feature", values_to = "z_val")
+
+# reset the order of predictor variables for plotting
+cluster_centers$feature <- factor(
+  cluster_centers$feature,
+  levels = c(
+    'PTS',
+    'AST',
+    'ORB',
+    'DRB',
+    'STL',
+    'BLK',
+    'TOV',
+    '2PA',
+    '3PA',
+    'FTA',
+    '2P%',
+    '3P%',
+    'FT%'
+  )
+)
+
+# reset the order of clusters for plotting (cluster 10 would default to come after cluster 1 and before cluster 2)
+cluster_centers$Cluster <- factor(
+  cluster_centers$Cluster,
+  levels = c('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Cluster 5')
+)
+
+```
+
+## Standardized Feature Profiles Across NBA Player Clusters
+
+```{r}
+#| echo: false
+#| label: fig-centers
+#| fig-cap: "K-Means Clusters Centers"
+
+cluster_centers %>%
+  ggplot(aes(x = feature, y = z_val, color = Cluster)) +
+  geom_point(size = 2) + # plot points
+  scale_color_manual(values = colors) + # call 8-color palette
+  gghighlight(use_direct_label = FALSE) + # highlight each cluster
+  facet_wrap( ~ Cluster) + # create seperate plots for each cluster
+  labs(x = "Feature", y = "Cluster Center", title = "Visualizing K-Means Cluster Makeups", caption = cap) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4.5),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    legend.position = "none",
+    axis.text.x = element_text(angle=90, vjust = 0.5),
+    axis.text = element_text(size = 5),
+    strip.text = element_text(face='bold')
+  )
+```
+
+### Interpretation Summary
+
+This visualization in @fig-centers displays the standardized cluster centers across key features for each of the five K-Means clusters:
+
+- **Y-axis:** Cluster center value (standardized).
+- **X-axis:** Features such as PTS, AST, ORB, DRB, STL, BLK, TOV, 2PA, 3PA, FTA, 2P%, 3P%, FT%.
+
+### Cluster Insights
+
+#### Cluster 1 – *Versatile Contributors*
+Shows strong positive values across multiple features, suggesting players who contribute in scoring, playmaking, rebounding, and defense. Likely high-usage, well-rounded players impacting many facets of the game.\
+**Example players:** Nikola Jokić, Giannis Antetokounmpo
+
+#### Cluster 2 – *Low-Usage Role Players*
+Displays negative or near-zero standardized values across most features, indicating players with minimal offensive and defensive impact. Often used in niche roles with limited involvement.\
+**Example players:** Payton Pritchard, Keegan Murray
+
+#### Cluster 3 – *Perimeter-Oriented Shooters*
+Shows high standardized values in perimeter shooting and attempts (3PA, 3P%) but average or below-average contributions in other areas. Represents players focusing on spacing and shooting from deep.\
+**Example players:** Shai Gilgeous-Alexander, Anthony Edwards
+
+#### Cluster 4 – *Balanced Average Players*
+Cluster center values hover near zero across features, indicating balanced players with moderate contributions without specific standout strengths or weaknesses.\
+**Example players:** Andrew Wiggins, Lauri Markkanen
+
+#### Cluster 5 – *Efficient Finishers / Interior Specialists*
+Displays strong positive standardized values in interior scoring efficiency (2P%) and rebounding metrics (ORB, DRB), suggesting players who finish efficiently around the rim and contribute on the boards, such as rim-running bigs or interior finishers.\
+**Example players:** Mark Williams, Deandre Ayton
+
+### Cluster Profiles Summary
+
+The table below in @tbl-profiles summarizes the per-game statistical averages for each identified cluster, providing further context on their typical playing time and production. This includes key metrics such as minutes per game, points, assists, rebounds, and shooting attempts, highlighting how each cluster contributes differently on the court.
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: tbl-profiles
+#| tbl-cap: "Cluster Profiles: Per-Game Statistical Averages"
+
+players <- gamedata %>%
+  group_by(namePlayer, idPlayer) %>%
+  summarise(
+    total_minutes = sum(minutes),
+    avg_minutes = mean(minutes),
+    pctfg3 = sum(fg3m) / sum(fg3a),
+    pctfg2 = sum(fg2m) / sum(fg2a),
+    pctft = sum(ftm) / sum(fta),
+    fg3a = mean(fg3a),
+    fg2a = mean(fg2a),
+    fta = mean(fta),
+    oreb = mean(oreb),
+    dreb = mean(dreb),
+    ast = mean(ast),
+    stl = mean(stl),
+    blk = mean(blk),
+    tov = mean(tov),
+    pts = mean(pts)
+    ) %>%
+  ungroup() %>%
+  filter(
+    total_minutes >= 900
+  ) 
+
+players <- players %>%
+  mutate(cluster = factor(kmeans5$cluster))
+
+cluster_profiles <- players %>%
+  group_by(cluster) %>%
+  summarize(
+    n_players = n(),
+    MPG = mean(avg_minutes),
+    PPG = mean(pts),
+    APG = mean(ast),
+    ORPG = mean(oreb),
+    DRPG  = mean(dreb),
+    FG3A = mean(fg3a),
+    FG2A = mean(fg2a),
+    STPG = mean(stl),
+    BLKPG = mean(blk),
+    TOVPG = mean(tov)
+  ) %>%
+  ungroup() %>% 
+  mutate(across((MPG:TOVPG), round, 2)) %>%
+  arrange(desc(PPG))
+
+reactable(cluster_profiles,
+          columns = list(
+            cluster = colDef(name = "Cluster"),
+            n_players = colDef(name = "# Players")
+          ),
+          defaultColDef = colDef(headerStyle = list(background = "#007FFF", color = "#e9ecef"),
+                                 align = "center"))
+```
+
+One notable finding in @tbl-profiles is that while Cluster 3 (*Perimeter-Oriented Shooters*) averages the highest points per game (22.02 PPG) and minutes, their offensive rebounds (0.8 ORPG) remain the lowest among clusters, reflecting their tendency to operate on the perimeter rather than attacking the glass. In contrast, Cluster 5 (*Efficient Finishers / Interior Specialists*) plays fewer minutes on average (22.64 MPG) yet contributes strong offensive rebounding (2.51 ORPG), underscoring their specialized role as interior scorers and rebounders despite lower scoring volume overall.
+
+## NBA Player Archetypes by Scoring and Defensive Impact (2024–25)
+
+```{r}
+#| echo: false
+#| label: fig-NBA
+#| fig-cap: "Scoring vs. Defensive Clusters Scatterplot"
+
+players <- players %>%
+  mutate(defensive = oreb + stl + blk)
+
+ggplot(data = players, aes(x = pts, y = defensive, color = cluster)) +
+  geom_point(alpha = 0.5, size = 3) +
+  geom_text_repel(
+    data = players %>%
+      group_by(cluster) %>%
+      slice_max(pts + defensive, n = 3),
+    # Label top 3 scorers per cluster
+    aes(label = namePlayer),
+    size = 1.8,
+    max.overlaps = 15,
+    box.padding = 0.5,
+    segment.color = "grey50",
+    family = "Roboto"
+  ) +
+  geom_hline(
+    # average lines
+    yintercept = mean(players$defensive),
+    linetype = "dashed",
+    color = "grey50",
+    alpha = 0.5
+  ) +
+  geom_vline(
+    xintercept = mean(players$pts),
+    linetype = "dashed",
+    alpha = 0.5
+  ) +
+  annotate("text", x = 1, y = 7.5, 
+           label = "Efficient Finishers / Interior Specialists", 
+           size = 2.2, family = font, fontface = "bold", color = "#06d6a0", hjust = 0, alpha = 0.65) +
+  annotate("text", x = 10, y = 0.2, 
+           label = "Balanced Average Players", 
+           size = 2.2, family = font, fontface = "bold", color = "#ef476f", hjust = 0, alpha = 0.65) +
+  annotate("text", x = 22, y = 7.5, 
+           label = "Versatile Contributors", 
+           size = 2.2, family = font, fontface = "bold", color = "#ffd166", hjust = 0, alpha = 0.65) +
+  annotate("text", x = 22, y = 0.2, 
+           label = "Perimeter-Oriented Shooters", 
+           size = 2.2, family = font, fontface = "bold", color = "#118ab2", hjust = 0, alpha = 0.65) +
+  annotate("text", x = 1, y = 0.2, 
+           label = "Low-Usage Role Players", 
+           size = 2.2, family = font, fontface = "bold", color = "#073b4c", hjust = 0, alpha = 0.65) +
+  scale_y_continuous(limits = c(-0.05, 8), breaks = pretty_breaks()) +
+  scale_x_continuous(limits = c(-0.05, 33), breaks = pretty_breaks()) +
+  scale_color_manual(values = colors) +
+  labs(
+    title = "2024-25 NBA Regular Season: Player Cluster Analysis",
+    subtitle = "Scoring vs. Defensive Impact with Top Two-Way Performers Highlighted",
+    caption = cap,
+    x = "Points Per Game",
+    y = "Defensive Contributions (oreb + stl + blk)"
+  ) +
+  theme_minimal(base_family = font, base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_text(color = "gray35", size = 8),
+    plot.caption = element_markdown(size = 4.5),
+    axis.title = element_text(size = 7.5),
+    axis.text = element_text(size = 6),
+    legend.position = "none",
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank()
+  )
+
+```
+
+### Interpretation Summary
+
+This scatter plot in @fig-NBA visualizes NBA players by their **points per game (x-axis)** and **defensive contributions (y-axis)**, categorizing them into functionally meaningful clusters:
+
+- **X-axis:** Points per game, indicating offensive scoring output.
+- **Y-axis:** Defensive contributions (rebounds + steals + blocks), indicating defensive impact.
+
+### Cluster Insights
+
+#### Efficient Finishers / Interior Specialists
+Players with **high defensive contributions and strong interior scoring efficiency**, often including rim protectors, offensive rebounders, and finishers around the basket.
+
+#### Versatile Contributors
+Players with **both high scoring and defensive impact**, representing well-rounded stars who contribute significantly on both ends of the floor.
+
+#### Low-Usage Role Players
+Players with **lower scoring and defensive metrics**, often occupying limited roles focused on niche tasks or floor spacing without high usage rates.
+
+#### Balanced Average Players
+Players with **moderate scoring and defensive contributions**, offering balanced production across multiple areas without being extreme outliers.
+
+#### Perimeter-Oriented Shooters
+Players with **high scoring output, particularly from perimeter shooting, but lower defensive contributions**, often including ball-dominant guards and wing scorers focused on offensive creation.
+
+# Conclusion
+
+This analysis leveraged PCA and K-Means clustering to uncover data-driven NBA player archetypes based on season-level performance metrics. By moving beyond traditional position labels, we identified nuanced skill-based clusters ranging from versatile contributors to perimeter shooters and interior specialists. These insights provide a deeper understanding of how players shape the game in the modern NBA and offer practical applications for scouting, roster construction, and strategic planning.
+
+Future work could integrate advanced defensive metrics or tracking data to further refine these archetypes and evaluate their impact on team success.
+
+# Acknowledgements
+
+Thank you to **Alex Stern** for the insightful `hoopDown` tutorials that guided parts of this analysis, and to **Alex Bresler** for developing the `nbastatR` package, which enabled efficient data retrieval. I also want to thank the **broader R community** for its extensive resources and support, and **California State University, Long Beach (CSULB)** for providing an academic environment that fosters analytical growth and applied learning.
+
+This project would not have been possible without these contributions.
+
+# References
+
+- NBA Advanced Stats. (2025). Retrieved from [https://www.nba.com/stats](https://www.nba.com/stats)
+
+- Stern, A. *hoopDown: Modern NBA analysis with R*. Retrieved from [https://alexcstern.github.io/hoopDown.html](https://alexcstern.github.io/hoopDown.html)
+
+- Bresler, A. *nbastatR: R Interface to NBA Statistics API*. Retrieved from [https://github.com/abresler/nbastatR](https://github.com/abresler/nbastatR)

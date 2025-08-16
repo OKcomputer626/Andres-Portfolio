@@ -1,33 +1,37 @@
 ---
-title: "`Andresviz.log()`"
+title: "Visualizations"
 author: ""
-title-block-banner: false
-page-layout: full
-description-meta: "A collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting projects."
-
+comments: false
+citation: false
+toc: false
+date-format: "MMMM D, YYYY"
+description: |
+ A collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting projects.
 listing:
   - id: visualization_2024
     contents: TidyTuesday/2024
     sort: "date desc"
-    template: ../html/blog/listing.ejs
     categories: true
+    type: grid
+    fields: [title, categories, date, image]
   - id: visualization_2025
     contents: 
       - TidyTuesday/2025
       - Visualizations/2025
     sort: "date desc"
-    template: ../html/blog/listing.ejs
     categories: true
-    
-toc-title: Year
-toc-location: right
-date-format: "MMMM D, YYYY"
-image: ""
-code-tools: false
-comments: false
----
+    type: grid
+    fields: [title, categories, date, image]
+format: 
+  html: 
+    page-layout: full
+title-block-banner: false
 
-Welcome to `Andresviz.log()`! Here, I share my collection of data visualizations made with R, featuring TidyTuesday challenges and other interesting project!
+header-includes: >
+  <link rel="stylesheet" href="../assets/listing-default.css">
+resources:
+  - ../assets/listing-default.css
+---
 
 ## 2025
 

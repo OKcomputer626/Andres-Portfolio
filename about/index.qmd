@@ -1,0 +1,141 @@
+---
+title: "Andres Gonzalez"
+subtitle: "Data Scientist & Statistician"
+image: "Graduation Day in Anime Style.png"
+comments: false
+image-alt: "Anime-style illustration of Andres Gonzalez on graduation day, wearing a green and gold stole and a tie, standing outdoors."
+about:
+  template: trestles
+  image-width: 14em
+  image-shape: rounded
+  id: hero-heading
+  links:
+    - text: "{{< fa universal-access >}}"
+      aria-label: "Accessibility statement"
+      href: accessibility.qmd
+    - text: "{{< fa brands bluesky >}}"
+      aria-label: "Bluesky"
+      href: https://bsky.app/profile/andresanalytics.bsky.social
+    - icon: linkedin
+      aria-label: "LinkedIn"
+      href: https://www.linkedin.com/in/andresgonzalez26/
+    - icon: github
+      aria-label: GitHub
+      href: https://github.com/OKcomputer626
+listing: 
+- id: blog
+  contents: 
+    - "../blog"
+  sort: date desc
+  type: grid
+  grid-columns: 1
+  categories: false
+  sort-ui: false
+  filter-ui: false
+  fields: [title, subtitle, image]
+  max-items: 1
+  image-height: "200"
+- id: visualization
+  contents: 
+    - "../visualization/Visualizations/2025/*.qmd"
+    - "../visualization/TidyTuesday/2025/**/*.qmd"
+  sort: date desc
+  type: grid
+  grid-columns: 1
+  categories: false
+  sort-ui: false
+  filter-ui: false
+  fields: [title, subtitle, image]
+  max-items: 1
+  image-height: "200"
+- id: project
+  contents: 
+    - "../project/Projects/2025/**/*.qmd"
+  sort: date desc
+  type: grid
+  grid-columns: 1
+  categories: false
+  sort-ui: false
+  filter-ui: false
+  fields: [title, subtitle, image]
+  max-items: 1
+  image-height: "200"
+format: 
+  html: 
+    page-layout: full
+
+header-includes: >
+  <link rel="stylesheet" href="../assets/about.css">
+resources:
+  - ../assets/about.css
+---
+
+::: {#hero-heading}
+<div class="h1">Welcome to my portfolio</div>
+
+Thank you for visiting!
+
+I am Andres Gonzalez, a Data Scientist with a strong background in Applied Mathematics and Applied Statistics.  
+My work focuses on applying statistical modeling, Bayesian methods, and machine learning to solve real-world problems, particularly in sports analytics, biostatistics, and predictive modeling.
+
+I have built and contributed to projects that combine rigorous statistical analysis with clear, compelling visualizations to generate actionable insights.  
+You can explore my [projects](/project) to see examples of my work, including Bayesian MCMC models, survival analysis, and machine learning applications.
+
+Feel free to [connect with me](/contact.qmd) if you'd like to collaborate or discuss analytics and modeling ideas! {{< fa feather-pointed >}}
+
+:::
+
+## About me
+
+::: {.grid}
+
+::: {.g-col-6 #about-me-1}
+
+**Data scientist and statistician with expertise in Bayesian modeling, statistical analysis, and predictive analytics.**
+
+I specialize in building statistical and machine learning models using R and Python, applying methods such as Bayesian MCMC, survival analysis, and predictive modeling. My work covers domains like sports analytics, biostatistics, and time series forecasting. I’m passionate about turning complex data into actionable insights through rigorous analysis and clear visualization.
+
+:::
+
+::: {.g-col-6 #about-me-2}
+
+I’m building my career in data science and statistics, with a strong academic foundation and a growing portfolio of applied projects. My work focuses on statistical modeling, Bayesian methods, and predictive analytics, using R and Python to solve real-world problems in sports analytics, biostatistics, and beyond.  
+
+Previously, I worked as a mathematics and statistics tutor — including for NCAA Division I athletes — and as a sales associate at Dollar Tree, where I developed strong communication and problem-solving skills.  
+
+<ul class="fa-ul">
+   <li><span class="fa-li"><i class="fa-solid fa-graduation-cap"></i></span>Master’s in Applied Statistics ∙ California State University, Long Beach ∙ 2024</li>
+   <li><span class="fa-li"><i class="fa-solid fa-graduation-cap"></i></span>Bachelor’s in Applied Mathematics ∙ Cal Poly Pomona ∙ 2020</li>
+</ul>
+
+:::
+
+:::
+<!-- end grid -->
+
+## Featured Posts
+
+:::: {.grid}
+
+::: {.g-col-3}
+#### Blog
+::: {#blog}
+:::
+[See all &rarr;](../blog){.about-links .subtitle}
+:::
+
+::: {.g-col-3}
+#### Visualization
+::: {#visualization}
+:::
+[See all &rarr;](../visualization){.about-links .subtitle}
+:::
+
+::: {.g-col-3}
+#### Project
+::: {#project}
+:::
+[See all &rarr;](../project){.about-links .subtitle}
+:::
+
+::::

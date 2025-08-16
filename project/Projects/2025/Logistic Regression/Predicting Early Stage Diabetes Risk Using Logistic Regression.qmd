@@ -1,0 +1,1250 @@
+---
+title: "Predicting Early Stage Diabetes Risk Using Logistic Regression"
+subtitle: "This analysis uses multivariate logistic regression to identify and quantify key predictors of early-stage diabetes risk."
+description: ""
+slug: early-stage-diabetes-logit
+image: featured.jpg
+number-sections: false
+date: August 8, 2025
+categories: 
+  - Biostatistics
+  - Logistic Regression
+  - Predictive Modeling
+  - Public Health
+format:
+  html:
+    fig-cap-location: bottom
+    lightbox: true      # moved here so Quarto reliably picks it up
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+## Abstract
+
+Early identification of diabetes risk enables timely lifestyle and clinical interventions. Using a dataset of 520 patients with demographic and symptom indicators (e.g., polyuria, polydipsia, weakness), we develop an interpretable logistic regression model to predict early-stage diabetes. After exploratory analysis of age, gender, and symptom prevalence, we compare candidate models and finalize a specification that includes a clinically motivated interaction between polyuria and weakness. Model performance is evaluated with hold-out metrics and ROC/AUC, alongside calibration to assess reliability of predicted risks. We present adjusted odds ratios with confidence intervals to quantify each predictor’s contribution and visualize marginal effects for age and key symptoms. Results highlight strong associations for polyuria and polydipsia, a notable negative effect for male gender, and an attenuated combined effect for polyuria × weakness. We discuss implications for screening workflows and limitations related to sample size and self-reported symptoms. Overall, the model provides a transparent baseline that balances predictive utility with interpretability, suitable for early risk stratification and as a foundation for future, larger-scale studies.
+
+## Introduction
+
+### Background
+
+Diabetes mellitus is a chronic metabolic disorder characterized by elevated blood glucose levels, which can lead to long-term damage to the heart, kidneys, eyes, and nerves. Early-stage detection is critical because timely intervention through lifestyle changes, medication, or monitoring can slow or even prevent progression to more severe stages. In clinical practice, logistic regression is one of the most widely used predictive models because of its interpretability and straightforward implementation, making it a valuable tool for risk stratification in healthcare.
+
+### Research Question
+
+*Can a logistic regression model using demographic and symptom-based predictors accurately predict the risk of early-stage diabetes in patients, and which factors contribute most strongly to that risk?*
+
+*For example, given a **40-year-old female** presenting with **genital thrush** and **weakness**, can the model estimate her probability of having early-stage diabetes?*
+
+### Objectives
+
+This analysis aims to:
+
+1. Explore the distribution of age, gender, and key symptoms in the study population.
+2. Quantify differences in symptom prevalence between patients with and without early-stage diabetes.
+3. Build a logistic regression model to identify significant predictors of diabetes risk.
+4. Evaluate model performance using classification metrics and ROC/AUC.
+5. Interpret results in a clinically meaningful way, including examination of an interaction between polyuria and weakness.
+
+```{r}
+#| include: false
+
+library(tidyverse)
+library(showtext)
+library(glue)
+library(skimr)
+library(ggtext)
+library(ggbeeswarm)
+library(patchwork)
+library(MASS)
+library(glmnet)
+library(performance)
+library(pROC)
+library(gt)
+library(gtExtras)
+library(gtsummary)
+library(ggeffects)
+library(kableExtra)
+```
+
+```{r}
+#| include: false
+
+# Add Google fonts
+font_add_google("Roboto Condensed", family = "Roboto")
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+```{r}
+#| include: false
+
+# Generate a social media caption with custom colors and font styling
+social <- andresutils::social_caption(font_family = "Roboto", icon_color = "#317873") 
+
+# Construct the final plot caption with TidyTuesday details, data source, and social caption
+cap <- paste0(
+  "**Source**: UCI ML Repository - Early Stage Diabetes Risk Prediction | **Graphic**: ", social
+)
+```
+
+```{r}
+#| include: false
+
+df <- read_csv(here::here("Data/diabetes_data_upload.csv"))
+```
+
+```{r}
+#| include: false
+
+glimpse(df)
+skim(df)
+
+head(df)
+```
+
+## Data Description
+
+### Dataset Overview
+
+The dataset contains information from 520 patients, each described by demographic information, self-reported symptoms, and a diagnosis label indicating early-stage diabetes status. The data consists of 16 predictor variables and one target variable, `class`, which takes the values **Positive** (patient has early-stage diabetes) or **Negative** (patient does not have early-stage diabetes).
+
+All predictors are categorical except for `Age`, which is numeric and represents the patient’s age in years.
+
+### Variables
+
+@tbl-variables below provides a summary of each variable, including its type and description.
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: tbl-variables
+#| tbl-cap: "Summary of variables in the diabetes dataset."
+
+# Create a dataframe for the variable list
+variables_df <- tribble(
+  ~Variable,            ~Type,         ~Description,
+  "Age",                "Numeric",     "Age of the patient in years",
+  "Gender",             "Categorical", "Patient gender: Male or Female",
+  "Polyuria",           "Categorical", "Excessive urination: Yes or No",
+  "Polydipsia",         "Categorical", "Excessive thirst: Yes or No",
+  "sudden weight loss", "Categorical", "Unexplained weight loss: Yes or No",
+  "weakness",           "Categorical", "General body weakness: Yes or No",
+  "Polyphagia",         "Categorical", "Excessive hunger: Yes or No",
+  "Genital thrush",     "Categorical", "Fungal infection in genital area: Yes or No",
+  "visual blurring",    "Categorical", "Blurred vision: Yes or No",
+  "Itching",            "Categorical", "Persistent skin itching: Yes or No",
+  "Irritability",       "Categorical", "Increased irritability: Yes or No",
+  "delayed healing",    "Categorical", "Slow wound healing: Yes or No",
+  "partial paresis",    "Categorical", "Partial muscle weakness: Yes or No",
+  "muscle stiffness",   "Categorical", "Stiffness in muscles: Yes or No",
+  "Alopecia",           "Categorical", "Hair loss: Yes or No",
+  "Obesity",            "Categorical", "Obese body condition: Yes or No",
+  "class",              "Categorical", "Diagnosis outcome: Positive or Negative for early-stage diabetes"
+)
+
+# Display the table with kableExtra styling
+kbl(variables_df, align = "c", escape = FALSE) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed"),
+    font_size = 11
+  ) %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#317873")
+```
+
+### Data Preparation Notes
+
+- All categorical variables were coded as **Yes** or **No**.
+- The target variable `class` was converted to a binary outcome for modeling purposes, with Positive coded as 1 and Negative as 0.
+- There were no missing values in the dataset.
+
+## Exploratory Data Analysis
+
+This section summarizes key characteristics of the study population prior to modeling, focusing on demographics (age and gender) and the distribution of symptom indicators across diabetes status.
+
+### Age Distribution
+
+@fig-age-distribution shows the distribution of patient ages in the study population.
+
+Most patients are between **40 and 60 years old**, with fewer younger adults and a gradual taper into the 70s–90s. The distribution is slightly right-skewed due to the presence of older individuals.
+
+The **median age** is 47.5 years (gold dashed line) and the **mean age** is 48.03 years (light blue dotted line). Their close proximity suggests minimal skew, indicating that the age distribution is relatively balanced.
+
+Clinically, this age profile aligns with known patterns of early-stage diabetes, which tends to be more common in middle-aged and older adults.
+
+```{r}
+#| label: fig-age-distribution
+#| fig-cap: "Histogram of patient ages with median (gold) and mean (light blue) markers."
+#| echo: false
+#| warning: false
+
+age_median <- median(df$Age)
+age_mean <- round(mean(df$Age), 2)
+
+df %>%
+  ggplot(aes(x = Age)) +
+  geom_histogram(fill = "#317873", color = "black") +
+  geom_rug(alpha = 0.25, linewidth = 0.3) +
+  geom_vline(
+    xintercept = age_median,
+    linetype = "dashed",
+    color = "#FEBE10",
+    linewidth = 1
+  ) +
+  # Mean line (gray, dotted)
+  geom_vline(
+    xintercept = age_mean,
+    linetype = "dotted",
+    color = "#52e2ee",
+    linewidth = 0.9
+  ) +
+  annotate(
+    "label",
+    x = 20,
+    y = 40,
+    label = paste0("Median: ", age_median, " Years\n", "Mean: ", age_mean, " Years"),
+    family = "Roboto",
+    size = 2.5,
+    lineheight = 1.5
+  ) +
+  scale_x_continuous(breaks = seq(0, 100, 5)) +
+  labs(
+    y = "Frequency",
+    title = "Age Distribution",
+    subtitle = "Dashed <span style='color:#FEBE10;'>gold</span> line marks median age; dotted <span style='color:#52e2ee;'>light blue</span> line marks mean age",
+    caption = cap
+  ) +
+  theme_minimal(base_size = 9, base_family = "Roboto") +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(face = "bold", margin = margin(b = 5)),
+    plot.subtitle = element_markdown(color = "gray40",size = 7),
+    plot.caption = element_markdown(size = 5),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(linetype = "dashed")
+  )
+```
+
+### Age and Gender by Diabetes Status
+
+@fig-age-gender-status shows the distribution of patient ages stratified by gender, with points colored according to diabetes diagnosis (Positive or Negative).  
+Each dot represents an individual patient, allowing visualization of the overlap and separation of age profiles between the two outcome groups.
+
+**Key observations:**
+
+- For both males and females, positive diagnoses are more common in middle-aged and older adults, generally between 35 and 65 years.
+- Negative cases are spread more evenly across ages but are less common among older adults.
+- The **mean age** within each gender group (red diamond) is close to 47–48 years, consistent with the median and mean from the overall age distribution.
+- No extreme gender imbalance in sample size is observed, but subtle shifts in age patterns by gender are visible — for example, female positive cases appear slightly younger on average than male positive cases.
+
+From a clinical perspective, this pattern supports the established understanding that early-stage diabetes prevalence increases with age, but the relationship is nuanced when examined separately by gender.
+
+```{r}
+#| label: fig-age-gender-status
+#| fig-cap: "Age and Gender distribution by diabetes status. Red diamonds indicate mean age within each gender group."
+#| echo: false
+#| warning: false
+
+df %>%
+  ggplot(aes(x = Age, y = Gender, color = class)) +
+  geom_quasirandom(method = "pseudorandom",
+                   alpha = 0.75,
+                   cex = 1.5) +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    shape = 18,
+    size = 3,
+    color =  alpha("#DC143C", 0.9),
+  ) +
+  scale_color_manual(values = c("#20a39e", "#ffba49")) +
+  scale_x_continuous(breaks = seq(0, 100, 10), expand = expansion(mult = c(0.01, 0.03))) +
+  annotate(
+        "point",  
+        x = 81, 
+        y = 2.4, 
+        shape = 18, 
+        size = 4, 
+        color = alpha("#DC143C", 0.9)
+    ) +
+    annotate(
+        "text",
+        x = 85, y = 2.4, label = " = Mean",
+        color =  alpha("#DC143C", 0.9),
+        size = 2.5,
+        fontface = "bold",
+        family = "Roboto"
+    ) +
+  coord_cartesian(clip = "off") +
+  labs(title = "Age and Gender Distribution by Diabetes Status",
+       subtitle = "Each point represents a patient colored by diabetes diagnosis (Positive or Negative)",
+       caption = cap) +
+  guides(colour = guide_legend(override.aes = list(size = 2.5))) +
+  theme_minimal(base_size = 9, base_family = "Roboto") +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "gray40", size = 7),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(hjust = 0.5, size = 4),
+    legend.position = "top",
+    legend.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.y = element_text(hjust = 0),
+    plot.margin =  margin(5, 5, 5, 5)
+  )
+```
+
+### Age Distribution by Diabetes Status
+
+@fig-age-distribution-status presents the distribution of patient ages, separated by diabetes diagnosis (Positive or Negative). The histogram shows how frequently patients occur across different age groups, with class-specific means indicated by dashed vertical lines.
+
+**Key observations:**
+
+- Patients without diabetes have a slightly lower **mean age** (46.4 years) than those with diabetes (49.1 years).
+- Most patients in both groups are between **35 and 65 years**, with fewer cases among younger adults and those over 70.
+- The right tail extends into the late 80s, though cases in this range are rare.
+- Overlap between groups suggests that age alone is not a strong discriminator, but the upward shift in the positive group’s mean aligns with the trend that diabetes prevalence increases with age.
+
+From a clinical perspective, the modest age gap reflects the progressive nature of type 2 diabetes risk over the life course, even if age is not a standalone predictor.
+
+```{r}
+#| label: fig-age-distribution-status
+#| fig-cap: "Age distribution of patients by diabetes status. Dashed lines indicate mean age for each diagnosis group."
+#| echo: false
+#| warning: false
+
+class_means <- df %>%
+  summarise(
+    mean_status = mean(Age, na.rm = TRUE),
+    .by = class
+  )
+
+df %>%
+  ggplot(aes(x = Age, fill = class)) +
+  geom_histogram(alpha = 0.70) +
+  geom_vline(
+    data = class_means,
+    aes(xintercept = mean_status, color = class),
+    linetype = "dashed",
+    linewidth = 0.6,
+    show.legend = FALSE
+  ) +
+  scale_fill_manual(values = c("#20a39e", "#ffba49")) +
+  scale_color_manual(values = c("#20a39e", "#ffba49")) +
+  annotate(
+    "text",
+    x = 38,
+    y = 46,
+    label = paste0("Class Mean: ", round(class_means$mean_status[class_means$class == "Negative"], 1), " Years"),
+    color = "#20a39e",
+    size = 2,
+    alpha = 0.8,
+    family = "Roboto",
+    fontface = "bold"
+  ) +
+  annotate(
+    "text",
+    x = 57.5,
+    y = 46,
+    label = paste0("Class Mean: ", round(class_means$mean_status[class_means$class == "Positive"], 1), " Years"),
+    color = "#ffba49",
+    size = 2,
+    alpha = 0.8,
+    family = "Roboto",
+    fontface = "bold"
+  ) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), expand = expansion(mult = c(0.01, 0.04))) +
+  labs(
+    title = "Age Distribution by Diabetes Status",
+    subtitle = "Frequency of patients across age groups, split by diabetes diagnosis",
+    y = "Frequency",
+    caption = cap
+  ) +
+  theme_minimal(base_family = "Roboto", base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40", size = 7),
+    plot.caption = element_markdown(hjust = 0.5, size = 4),
+    plot.title.position = "plot",
+    panel.grid = element_blank(),
+    legend.position = "top",
+    legend.title = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    plot.margin = margin(5, 5, 5, 5)
+  )
+```
+
+### Visual Summary of Demographics and Symptoms
+
+@fig-visual-summary presents three complementary views summarizing patient demographics and symptom patterns prior to modeling.
+
+**Key observations:**
+
+1. **Gender composition:** There is a slight predominance of male patients, which is important for interpreting model coefficients and assessing generalizability.
+2. **Age by diabetes status and gender:** Patients with diabetes span a wider age range compared to those without. While mean ages are similar across genders, positive cases—particularly among males—include a higher proportion of older adults.
+3. **Symptom profile of positive cases:** The most frequently reported symptoms are polyuria and polydipsia, followed by weakness. Other symptoms decline in prevalence and show gradual variation, suggesting that no single symptom alone is sufficient for accurate classification.
+
+**Interpretation and relevance:**
+
+- The male skew and mid-to-older age distribution align with known diabetes epidemiology, supporting the inclusion of age and gender as covariates in the logistic model.
+- The symptom hierarchy matches clinical expectations, reinforcing the decision to include these indicators in the model while also motivating the exploration of clinically relevant interactions (e.g., polyuria × weakness) rather than modeling symptoms in isolation.
+
+**Next steps:**  
+These descriptive findings guide the logistic regression specification, inform the selection of interaction terms, and set realistic expectations for effect sizes and model calibration.
+
+```{r, fig.width=15, fig.height=10}
+#| label: fig-visual-summary
+#| fig-cap: "Gender counts, age by diabetes status and gender, and top symptoms among diabetes-positive patients."
+#| echo: false
+#| warning: false
+
+gender_count <- df %>%
+  group_by(Gender) %>%
+  count() %>%
+  ungroup()
+
+p1 <- gender_count %>%
+  ggplot(aes(
+    x = Gender,
+    y = n,
+    fill = Gender,
+    label = n
+  )) +
+  geom_bar(stat = "identity", color = "black") +
+  geom_text(
+    vjust = -0.5,
+    family = "Roboto",
+    fontface = "bold",
+    size = 3.2
+  ) +
+  labs(x = "Gender", y = "Count", title = "Patient Gender Distribution", subtitle = "Total number of male and female patients in the dataset") +
+  scale_y_continuous(limits = c(0, 350)) +
+  scale_fill_manual(values = c("#c90076", "#2986cc")) +
+  coord_cartesian(clip = "off") +
+  theme_minimal(base_size = 10, base_family = "Roboto")  +
+  theme(
+    legend.position = "none",
+    plot.title.position = "plot",
+    plot.title = element_text(
+      size = 10,
+      face = "bold",
+      margin = margin(t = 5, b = 5)
+    ),
+    plot.subtitle = element_text(color = "grey40", size = 7),
+    panel.grid = element_blank(),
+    axis.title.x = element_blank()
+  )
+
+p2 <- df %>%
+  ggplot(aes(x = class, y = Age, color = Gender)) +
+  geom_jitter(position = position_jitterdodge(dodge.width = 0.9, seed = 123),
+              alpha = 0.5) +
+  geom_boxplot(
+    fill = "#FEFFC4",
+    alpha = 0.25,
+    outlier.shape = NA,
+    width = 0.5,
+    position = position_dodge(width = 0.9)
+  ) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10)) +
+  scale_color_manual(values =  c("#c90076", "#2986cc")) +
+  labs(
+    title = "Age Distribution by Diabetes Status and Gender",
+    subtitle = "Diabetes-positive patients span a wider age range across genders",
+    x = "Diabetes Class"
+  ) +
+  theme_minimal(base_size = 10, base_family = "Roboto") +
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    plot.title.position = "plot",
+    plot.title = element_text(
+      size = 10,
+      face = "bold",
+      margin = margin(t = 5, b = 5)
+    ),
+    plot.subtitle = element_markdown(color = "grey40", size = 7),
+    axis.title.x = element_blank()
+  )
+
+# Get total number of diabetes-positive patients
+total_positive <- df %>%
+  filter(class == "Positive") %>%
+  nrow()
+
+
+# Now calculate symptom frequency as percentage of all positive cases
+var_10 <- df %>%
+  pivot_longer(cols = Polyuria:Obesity,
+               names_to = "variables",
+               values_to = "count") %>%
+  filter(class == "Positive" & count == "Yes") %>%
+  group_by(variables) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(percentage = n / total_positive * 100) %>%
+  slice_max(percentage, n = 10)
+
+p3 <- var_10 %>%
+  ggplot(aes(x = reorder(variables, n), y = n)) +
+  geom_bar(stat = "identity",
+           fill = "#317873",
+           alpha = 0.8) +
+  geom_text(aes(label = sprintf("%.1f%%", percentage)),
+              hjust = -0.2,
+              size = 3.2,
+            family = "Roboto") +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15)),
+                     breaks = scales::pretty_breaks()) +
+  coord_flip() +
+  labs(
+    title = "Most Common Symptoms in Patients Diagnosed with Diabetes",
+    subtitle = "Percentage of 320 diabetes-positive patients who reported each symptom (Top 10 shown)",
+    y = "Number of Patients",
+    x = NULL
+  ) +
+  theme_minimal(base_size = 10, base_family = "Roboto") +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(
+      size = 10,
+      face = "bold",
+      margin = margin(t = 5, b = 5)
+    ),
+    plot.subtitle = element_markdown(color = "grey40", size = 7),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.y = element_text(hjust = 0)
+  )
+
+
+combined_plots <-  ((p1 / p2) +
+                      plot_layout(heights = c(0.9, 1.1))  # <- control vertical stack here
+                    |
+                      p3
+) +
+  plot_layout(widths = c(1, 1)) +
+  plot_annotation(
+    title = "Visual Summary of Patient Demographics and Reported Symptoms in Early Stage Diabetes",
+    subtitle = "Shows age, gender, and top 10 reported symptoms among 320 patients with diabetes",
+    caption = cap,
+    theme = theme(
+      plot.title = element_text(
+        size = 18,
+        face = "bold",
+        margin = margin(t = 5, b = 5)
+      ),
+      plot.subtitle = element_text(
+        size = 9,
+        color = "grey40",
+        margin = margin(t = 5, b = 5)
+      ),
+      plot.caption = element_markdown(
+        size = 7,
+        hjust = 0.5,
+        margin = margin(t = 5)
+      ),
+      text = element_text(family = "Roboto"),
+      plot.margin = margin(
+        t = 20,
+        r = 10,
+        b = 20,
+        l = 10
+      )
+    )
+  )
+
+combined_plots
+```
+
+## Bivariate Analysis
+
+Before specifying the logistic regression model, we examine how each predictor relates individually to diabetes status. This helps confirm expected relationships, identify unexpected patterns, and guide which variables or interactions may improve the model.
+
+### Symptom Prevalence by Diabetes Status
+
+@fig-symptom-prevalence compares the percentage of patients reporting each symptom, separated by diagnosis group.
+
+**Key observations:**
+
+1. **Classic symptom dominance:** Polyuria and polydipsia are far more common among diabetes-positive patients, consistent with clinical expectations.
+2. **Broader symptom elevation:** Weakness, sudden weight loss, polyphagia, and partial paresis also occur at substantially higher rates in positives than in negatives.
+3. **Areas of overlap:** Itching, delayed healing, and alopecia appear at similar rates across groups, suggesting limited standalone discriminative value.
+
+**Why it matters:**
+
+- Large prevalence gaps indicate strong candidates for inclusion in the logistic model and suggest higher odds ratios.
+- Overlapping symptoms highlight the need for a multivariable approach: no single indicator is sufficient for accurate classification.
+
+**Next step:**  
+These contrasts will help prioritize predictors and guide the inclusion of clinically motivated interactions (e.g., polyuria × weakness) in the logistic regression model.
+
+```{r}
+#| label: fig-symptom-prevalence
+#| fig-cap: "Symptom prevalence by diabetes status."
+#| echo: false
+#| warning: false
+
+symptom_prevalence <- df %>%
+  pivot_longer(Polyuria:Obesity, names_to = "Symptom", values_to = "Present") %>%
+  group_by(class, Symptom) %>%
+  summarise(percentage = 100 * mean(Present == "Yes", na.rm = TRUE), .groups = "drop")
+
+ggplot(symptom_prevalence, aes(x = Symptom, y = percentage, fill = class)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+  scale_y_continuous(expand = c(0,0)) +
+  scale_fill_manual(values = c("#20a39e", "#ffba49")) +
+  coord_flip() +
+  labs(
+    title = "Symptom Prevalence by Diabetes Status",
+    subtitle = "Percentage of patients reporting each symptom, based on 200 Negative and 320 Positive cases",
+    caption = cap,
+    x = "Symptom",
+    y = "Prevalence (%)"
+  ) +
+theme_minimal(base_family = "Roboto", base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(color = "grey40", size = 7),
+    plot.caption = element_markdown(hjust = 0.5, size = 4),
+    plot.title.position = "plot",
+    panel.grid = element_blank(),
+    legend.position = "top",
+    legend.title = element_blank(),
+    legend.key.size = unit(0.5, 'cm'),
+    plot.margin = margin(5, 5, 5, 5)
+  )
+```
+
+## Methods
+
+### Problem Setup and Notation
+
+Let $Y_i \in \{0, 1\}$ indicate early-stage diabetes status for subject $i$,  
+with $1 = \text{Positive}$ and $0 = \text{Negative}$.
+
+Let:
+
+$$
+x_i = (x_{i1}, \dots, x_{ip})^\top
+$$
+
+denote $p$ predictors, such as demographics, symptoms, and lifestyle factors.
+
+We model the conditional probability of a positive diagnosis as:
+
+$$
+\Pr(Y_i = 1 \mid x_i) = p_i
+$$
+
+---
+
+### Logistic Regression Model
+
+Logistic regression links $p_i$ to a linear predictor using the logit function:
+
+$$
+\text{logit}(p_i) \equiv \log\left( \frac{p_i}{1 - p_i} \right) = \eta_i = \beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}
+$$
+
+Equivalently:
+
+$$
+p_i = \frac{\exp(\eta_i)}{1 + \exp(\eta_i)}
+$$
+
+Here:
+
+- $\beta_j$ represents the change in **log-odds** of diabetes for a one-unit increase in $x_{ij}$, holding all other variables constant.
+- The quantity $e^{\beta_j}$ is the **odds ratio (OR)**, indicating the multiplicative change in odds for a one-unit change in $x_{ij}$.
+
+---
+
+### Likelihood and Estimation
+
+Assuming independent Bernoulli outcomes given $x_i$, the likelihood is:
+
+$$
+L(\beta) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}
+$$
+
+and the log-likelihood is:
+
+$$
+\ell(\beta) = \sum_{i=1}^{n} \left[ y_i \log p_i + (1 - y_i) \log (1 - p_i) \right]
+$$
+
+Parameters $\beta$ are estimated by **maximum likelihood**, using Newton–Raphson or Iteratively Reweighted Least Squares (IRLS).
+
+---
+
+### Model Building and Selection in R
+
+All models were fitted in R using the `glm()` function with `family = binomial`.  
+A null model (intercept only) and a full model (all predictors) were specified.
+
+Stepwise selection was applied in both forward and backward directions using the Akaike Information Criterion (AIC) as the selection metric:
+
+```{r}
+#| include: false
+
+# Convert target to binary: 1 = Positive, 0 = Negative
+diabetes <- df %>%
+  janitor::clean_names() %>%
+  mutate(class = if_else(class == "Positive", 1, 0))
+```
+
+```{r}
+# Refit on the full dataset using forward selection
+null_model <- glm(class ~ 1, data = diabetes, family = binomial)
+full_model <- glm(class ~ ., data = diabetes, family = binomial)
+
+# Forward selection
+forward_model <- stepAIC(null_model,
+                       direction = "forward",
+                       scope = list(lower = null_model, upper = full_model),
+                       trace = FALSE)
+
+# Backward elimination
+backward_model <- stepAIC(full_model,
+                       direction = "backward",
+                       scope = list(lower = null_model, upper = full_model),
+                       trace = FALSE)
+```
+
+Following selection, AIC values were compared (@tbl-aic-comparison).
+The forward model achieved a slightly lower AIC (198.36) than the backward model (198.64), indicating a marginally better fit according to this criterion.
+
+**Decision:**
+The forward-selected model was chosen for subsequent analysis.
+
+```{r}
+#| label: tbl-aic-comparison
+#| tbl-cap: "Comparison of AIC values for forward and backward stepwise logistic regression models."
+#| echo: false
+#| warning: false
+
+# Compare AIC values
+AIC(forward_model, backward_model) %>%
+  as_tibble() %>%
+  mutate(Model = c("Forward Model", "Backward Model")) %>%
+  relocate(Model, .before = df) %>% 
+  gt() %>%
+  opt_table_font(font = (google_font(name = "Roboto Condensed"))) %>%
+  gt_highlight_rows(
+    rows = 1,
+    fill = "#9AD0DC",
+    bold_target_only = TRUE,
+    target_col = Model
+  )
+```
+
+```{r}
+#| include: false
+
+add1(forward_model, ~.+weakness:polyuria, test = "F")
+mod.final <- update(forward_model, ~.+weakness:polyuria)
+```
+
+### Final Model with Interaction
+
+An interaction term between **weakness** and **polyuria** was added to capture whether the effect of one symptom on diabetes risk depends on the presence of the other.
+
+Including this interaction improved model fit relative to the forward-selected main-effects model, as indicated by a lower AIC (196.24 vs. 198.36; @tbl-aic-final).  
+
+**Decision:**  
+The interaction model was retained as the **final model** for interpretation and evaluation.
+
+```{r}
+#| label: tbl-aic-final
+#| tbl-cap: "AIC comparison: forward-selected vs final (with weakness × polyuria)."
+#| echo: false
+# Compare AIC values
+AIC(forward_model, mod.final) %>%
+  as_tibble() %>%
+  mutate(Model = c("Forward Model", "Final Model")) %>%
+  relocate(Model, .before = df) %>% 
+  gt() %>%
+  opt_table_font(font = (google_font(name = "Roboto Condensed"))) %>%
+  gt_highlight_rows(
+    rows = 2,
+    fill = "#9AD0DC",
+    bold_target_only = TRUE,
+    target_col = Model
+  )
+```
+
+## Final Logistic Regression Results
+
+@tbl-final-or presents odds ratios (ORs) with 95% confidence intervals (CIs) and Bonferroni-adjusted p-values for the final model, which includes the **polyuria × weakness** interaction.
+
+```{r}
+#| label: tbl-final-or
+#| tbl-cap: "Final logistic regression: odds ratios (95% CI) with Bonferroni-adjusted contrasts."
+#| echo: false
+#| warning: false
+
+# → Choose Final Model
+tbl_regression(
+  mod.final,
+  exponentiate = TRUE,
+  add_pairwise_contrast = TRUE,
+  contrast_adjust = "bonferroni",
+  pvalue_fun = ~ style_pvalue(.x, digits = 3)
+) %>%
+  add_significance_stars(hide_p = F,
+                         hide_se = F,
+                         hide_ci = F) %>%
+  bold_p() %>%
+  as_gt() %>%
+  opt_table_font(font = (google_font(name = "Roboto Condensed")))
+```
+
+::: callout-note
+**How to read this:** Odds ratios (OR) > 1 indicate higher odds of early-stage diabetes for the “Yes” (or first-listed) category; OR < 1 indicate lower odds, **holding other variables constant**. P-values are Bonferroni-adjusted.
+:::
+
+### Strongest positive associations
+- **Polydipsia (excessive thirst)** — OR **206** (95% CI: 47.4, 899; *p* < 0.001).  
+  Individuals reporting polydipsia are over **200×** more likely to have early-stage diabetes. This is the **strongest predictor**.
+- **Polyuria (frequent urination)** — OR **77.3** (22.9, 261; *p* < 0.001).  
+  Very large increase in odds, consistent with classic symptomatology.
+- **Irritability** — OR **11.3** (3.78, 33.7; *p* < 0.001).
+- **Genital thrush** — OR **7.01** (2.58, 19.1; *p* < 0.001).
+- **Polyphagia (excessive hunger)** — OR **3.72** (1.39, 9.92; *p* = 0.009).
+- **Partial paresis** — OR **3.62** (1.38, 9.54; *p* = 0.009).
+
+### Negative associations
+- **Male vs Female** — OR **0.01** (0.00, 0.03; *p* < 0.001).  
+  Males show markedly **lower** odds than females in this dataset.
+- **Itching** — OR **0.07** (0.02, 0.20; *p* < 0.001).  
+  Associated with substantially reduced odds.
+- **Age (per year)** — OR **0.94** (0.90, 0.98; *p* = 0.006).  
+  Slight decrease (~6% per year). *Note:* Counterintuitive; likely reflects sample characteristics rather than a generalizable trend.
+
+### Interaction
+- **Polyuria × Weakness** — OR **0.14** (0.02, 0.94; *p* = 0.046).  
+  The combined presence of **polyuria and weakness** yields **lower odds than expected** from adding their individual effects. Practically, weakness **attenuates** the otherwise strong association between polyuria and diabetes.
+
+### Non-significant
+- **Weakness (main effect)** — OR **1.45** (0.56, 3.76; *p* = 0.449).  
+  Not significant after adjustment when considered on its own.
+
+::: callout-tip
+**Bottom line:** Classic symptoms—**polydipsia** and **polyuria**—dominate risk prediction by large margins. Additional symptoms (irritability, genital thrush, polyphagia, partial paresis) contribute meaningfully. **Sex**, **itching**, and **age** show protective associations in this sample, and the **polyuria × weakness** interaction suggests that weakness moderates polyuria’s effect.
+:::
+
+### Visual Interpretation
+
+@fig-odds-ratios visually summarizes the final logistic regression model’s odds ratios (log scale) with 95% confidence intervals.
+
+- **Polydipsia** and **Polyuria** are positioned far to the right, confirming their exceptionally strong positive associations with early-stage diabetes.
+- Other predictors with elevated odds include **Irritability**, **Genital Thrush**, **Weakness**, **Polyphagia**, and **Partial Paresis**.
+- **Negative associations** — **Male gender**, **Itching**, **Age**, and the **Polyuria × Weakness** interaction — appear to the left of the 1.0 reference line, indicating reduced odds.
+- The log scale emphasizes the large gap between the strongest predictors and those with more moderate effects.
+- **Confidence interval widths** reflect precision: narrower intervals suggest more reliable estimates, while wider intervals (e.g., for polydipsia and polyuria) indicate greater variability in the data.
+
+**Takeaway:**  
+The plot complements the odds ratio table by illustrating the magnitude and direction of each predictor’s effect, while also conveying the relative precision of these estimates.
+
+```{r, fig.height=8, fig.width=8}
+#| label: fig-odds-ratios
+#| echo: false
+#| fig-cap: "Odds ratios with 95% confidence intervals for the final logistic regression model."
+
+sjPlot::plot_model(
+  mod.final,
+  # odds ratios
+  sort.est = TRUE,
+  # sort by effect size
+  show.values = TRUE,
+  # print ORs on the plot
+  value.size = 2.5,
+  # custom color
+  vline.color = "gray50",
+  # reference line color
+  title = "Odds Ratios with 95% Confidence Intervals"
+) +
+  labs(x = NULL, y = "Odds Ratio (log scale)", caption = cap)  +
+  theme_minimal(base_family = "Roboto", base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.caption = element_markdown(size = 5),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid.minor = element_blank()
+  )
+```
+
+## Predicted Probabilities by Predictor
+
+Marginal effects plots display the model-implied probability of early-stage diabetes for each predictor, averaging over other variables in the model.
+
+- **Polyuria** and **Polydipsia** have the strongest effects, with “Yes” responses pushing predicted probability close to 100%.
+- **Gender** shows markedly lower predicted probability for males, consistent with the negative odds ratio in the regression results.
+- **Irritability**, **Genital Thrush**, **Partial Paresis**, and **Polyphagia** each raise predicted probability by several percentage points.
+- **Itching** is associated with a noticeably lower predicted probability, matching its protective effect in the model.
+- **Weakness** has only a modest positive shift in predicted probability.
+- **Age** shows a declining curve, with lower predicted probabilities at older ages, reinforcing the non-linear pattern identified in the GAM analysis.
+
+**Takeaway:**  
+The marginal effects confirm that polyuria and polydipsia dominate risk prediction, while other symptoms and demographic factors contribute smaller but consistent influences on predicted diabetes probability.
+
+```{r, fig.height=12, fig.width=12}
+#| label: fig-final-effects
+#| echo: false
+#| fig-cap: "Predicted effects from the final logistic regression model."
+
+plots <- ggeffect(mod.final) %>%
+  plot(
+    colors = "#317873")
+  
+# Add desired font family to each plot
+plots <- lapply(plots, function(p) {
+  p + 
+    theme_ggeffects(base_family = "Roboto", base_size = 9) +
+    theme(
+      plot.title.position = "plot",
+      plot.title = element_text(face = "bold")
+    )
+})
+
+# Combine the updated plots
+sjPlot::plot_grid(plots)
+```
+
+## Model Evaluation
+
+### Model Diagnostics
+
+#### Exploring Non-Linear Effects (GAM Analysis)
+
+To assess whether the relationship between **age** and early-stage diabetes risk is strictly linear, we fit a Generalized Additive Model (GAM) including a smooth term for age, as shown in @fig-gam-effects.
+
+The smooth function indicates:
+
+- **Ages ~20–40:** Log-odds remain relatively flat, suggesting minimal effect.
+- **After ~40:** A gradual downward slope emerges, indicating a **decrease in diabetes risk** with increasing age—consistent with the negative linear estimate from the logistic regression.
+- **Extremes (<25 or >80 years):** Wider confidence intervals reflect greater uncertainty due to fewer observations.
+
+**Takeaway:**  
+While the logistic regression treated age as a strictly linear predictor, the GAM reveals that the decline in risk is more pronounced in older adults, with little effect in younger to mid-age ranges.
+
+```{r}
+#| label: fig-gam-effects
+#| echo: false
+#| fig-cap: "Generalized Additive Model (GAM) plots showing potential non-linear effects of age."
+
+# Use GAM to explore potential non-linear relationships
+gam_model <- mgcv::gam(class ~ polyuria + polydipsia + gender + itching + 
+    irritability + genital_thrush + partial_paresis + polyphagia + 
+    s(age) + weakness + polyuria:weakness, 
+    family = binomial, data = diabetes)
+
+plot(gam_model)
+```
+
+
+#### Overall Model Fit and Assumption Checks
+
+We evaluated model fit, assumptions, and stability using several diagnostic checks, as shown in @fig-model-diagnostics:
+
+- **Posterior Predictive Check:**  
+  Predicted intervals cover the observed class counts, indicating good calibration between model predictions and actual outcomes.
+- **Binned Residuals:**  
+  Most residual averages fall within error bounds, with minor deviations at probability extremes. This suggests the model is generally well-calibrated but may underfit certain ranges.
+- **Influential Observations:**  
+  All points lie within contour lines on the leverage vs. standardized residuals plot, indicating no single observation exerts undue influence.
+- **Collinearity (VIF):**  
+  All Variance Inflation Factor values are below 5, suggesting low multicollinearity and stable coefficient estimation.
+- **Uniformity of Residuals (Q–Q Plot):**  
+  Residual quantiles closely follow the standard uniform distribution, supporting the assumption of well-behaved residuals.
+
+**Summary:**  
+Diagnostics confirm that the model is well-specified, stable, and free from serious violations, with only minor residual patterning at probability extremes that may merit further investigation.
+
+```{r, fig.height=10, fig.width=10}
+#| label: fig-model-diagnostics
+#| echo: false
+#| fig-cap: "Model diagnostics for the forward-selected logistic regression model."
+
+# Model Diagnostics
+check_model(forward_model, 
+            base_size = 7) 
+```
+
+### Model Performance
+
+The model achieved high overall performance, correctly classifying **94.8%** of cases with strong sensitivity (**93.0%**) and specificity (**95.9%**) as shown in @tbl-confusion-metrics.
+
+```{r}
+#| label: tbl-confusion-metrics
+#| echo: false
+#| tbl-cap: "Accuracy, sensitivity, and specificity from the confusion matrix."
+
+pred <- predict(mod.final, type = "response")
+class <- ifelse(pred > 0.5, 1, 0)
+
+confusionmatrix <- caret::confusionMatrix(factor(class), factor(diabetes$class))
+
+# Extract values
+accuracy <- confusionmatrix$overall[1]
+sensitivity <- confusionmatrix$byClass[1]
+specificity <- confusionmatrix$byClass[2]
+
+# Create summary tibble
+metrics_tbl <- tibble::tibble(
+  Metric = c("Accuracy", "Sensitivity (Recall)", "Specificity"),
+  Value = c(accuracy, sensitivity, specificity),
+  Description = c(
+    "How often the model predicts correctly",
+    "How well it identifies positive cases",
+    "How well it identifies negative cases"
+  )
+)
+
+# Generate gt table
+metrics_tbl %>%
+  gt() %>%
+  fmt_number(columns = Value, decimals = 3) %>%
+  opt_table_font(font = (google_font(name = "Roboto Condensed")))
+```
+
+### ROC Curve
+
+The Receiver Operating Characteristic (ROC) curve (@fig-roc-curve) evaluates the model’s ability to discriminate between positive and negative cases.  
+The model achieved an **area under the curve (AUC)** of:
+
+$$
+\text{AUC} = 0.983
+$$
+
+This indicates excellent discrimination and near-perfect classification performance.
+
+```{r}
+#| label: fig-roc-curve
+#| echo: false
+#| warning: false
+#| message: false
+#| fig-cap: "ROC curve for the final logistic regression model."
+
+roc_curve <- roc(diabetes$class, pred)
+
+ggplot(
+  data = tibble(
+    FPR = 1 - roc_curve$specificities,
+    TPR = roc_curve$sensitivities
+  ),
+  aes(x = FPR, y = TPR)
+) +
+  geom_ribbon(aes(ymin = 0, ymax = TPR), fill = "#317873", alpha = 0.08) +
+  geom_line(color = "#317873", linewidth = 1.2) +
+  geom_abline(linetype = "dashed", color = "gray") +
+  annotate("label", x = 0.75, y = .40, 
+           label = paste0("Area under the curve: ", round(auc(roc_curve), 3)),
+           family = "Roboto", size = 2.5, lineheight = 1.5) +
+  labs(title = "ROC Curve — Model vs. Random", x = "False Positive Rate", y = "True Positive Rate", caption = cap) +
+  theme_minimal(base_family = "Roboto", base_size = 9) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.title.position = "plot",
+    plot.caption = element_markdown(size = 4),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid = element_blank()
+  )
+
+```
+
+### Train–Test Evaluation
+
+Using an 80/20 split, the model achieved a train accuracy of $0.945$, test accuracy of $0.962$, and a test AUC of $0.982$.  
+The close alignment between training and test performance, as shown in @tbl-model-eval, indicates that the model is capturing genuine patterns in the data rather than memorizing noise, with little evidence of overfitting.  
+This balance suggests the model should maintain its predictive strength when applied to new, unseen cases.
+
+```{r}
+#| label: tbl-model-eval
+#| echo: false
+#| tbl-cap: "Evaluation metrics for the final logistic regression model."
+#| message: false
+
+# Split Data into Train and Test Sets
+set.seed(245)
+train_index <- sample(nrow(diabetes), 0.8 * nrow(diabetes))
+train_data <- diabetes[train_index, ]
+test_data  <- diabetes[-train_index, ]
+
+# Variable Selection: Forward vs. Backward
+# Define null and full models
+train_model <- glm(
+  class ~ polyuria + polydipsia + gender + itching +
+    irritability + genital_thrush + partial_paresis + polyphagia +
+    age + weakness +  polyuria:weakness,
+  data = train_data,
+  family = binomial
+)
+
+
+# Predict probabilities
+train_pred <- predict(train_model, newdata = train_data, type = "response")
+test_pred  <- predict(train_model, newdata = test_data, type = "response")
+
+# Classify (threshold = 0.5)
+train_class <- ifelse(train_pred > 0.5, 1, 0)
+test_class  <- ifelse(test_pred > 0.5, 1, 0)
+
+# Accuracy
+train_acc <- mean(train_class == train_data$class)
+test_acc  <- mean(test_class == test_data$class)
+
+# ROC and AUC
+roc_test <- roc(test_data$class, test_pred)
+auc_test <- auc(roc_test)
+
+# Create summary tibble
+acc_auc_tbl <- tibble(
+  Metric = c("Train Accuracy", "Test Accuracy", "Test AUC"),
+  Value = c(train_acc, test_acc, auc_test),
+  Description = c(
+    "Accuracy on the training set",
+    "Accuracy on the test set",
+    "Area under the ROC curve for test set"
+  )
+)
+
+# Generate gt table
+acc_auc_tbl %>%
+  gt() %>%
+  fmt_number(columns = Value, decimals = 3) %>%
+  tab_header(
+    title = "Model Evaluation Metrics"
+  ) %>%
+  opt_table_font(font = (google_font(name = "Roboto Condensed")))
+
+```
+
+## Discussion
+
+The final logistic regression model demonstrated high predictive performance (Accuracy **94.8%**, Sensitivity **93.0%**, Specificity **95.9%**, AUC **0.983**), indicating excellent discrimination between diabetes-positive and diabetes-negative cases.
+
+In line with established clinical knowledge, **polydipsia** and **polyuria** were the strongest predictors of early-stage diabetes risk, followed by irritability, genital thrush, polyphagia, and partial paresis. Protective associations were observed for male gender, itching, and increasing age. The **polyuria × weakness** interaction suggested that when both symptoms occur together, the increase in odds is smaller than expected from their individual effects.
+
+**Scenario comparison:** For two otherwise identical **40-year-old patients** with **genital thrush** and **weakness** (all other symptoms absent), the model predicts a **higher probability** for the **female** than for the **male** (@tbl-scenario-two-patients, @fig-scenario-two-patients-ggeffects). This aligns with the strong protective association for male gender in the final model. Genital thrush alone is associated with markedly higher odds of early-stage diabetes (OR = 7.01), and while weakness has a more modest effect, the combination still elevates risk compared to patients without these symptoms. The absence of polyuria and polydipsia in this scenario results in a lower overall predicted probability than cases where those hallmark symptoms are present.
+
+## Worked Example: Scenario Prediction by Gender
+
+We compare two identical profiles—**age 40**, **genital thrush = Yes**, **weakness = Yes**, all other symptoms = **No**—that differ only by **gender**.  
+
+Given the strong protective effect for males in the final model, the **male** is expected to have a **lower predicted probability** than the **female**, all else equal.
+
+```{r}
+#| label: tbl-scenario-two-patients
+#| tbl-cap: "Predicted probability of early-stage diabetes for two otherwise-identical patients differing only by gender."
+#| echo: false
+#| message: false
+#| warning: false
+
+# ---- Two otherwise-identical patients, differing only by gender ----
+common_levels <- list(NoYes = c("No","Yes"), Sex = c("Female","Male"))
+
+new_patients <- tibble(
+  polyuria         = factor("No", levels = common_levels$NoYes),
+  polydipsia       = factor("No", levels = common_levels$NoYes),
+  gender           = factor(c("Female","Male"), levels = common_levels$Sex),
+  itching          = factor("No", levels = common_levels$NoYes),
+  irritability     = factor("No", levels = common_levels$NoYes),
+  genital_thrush   = factor("Yes", levels = common_levels$NoYes),
+  partial_paresis  = factor("No", levels = common_levels$NoYes),
+  polyphagia       = factor("No", levels = common_levels$NoYes),
+  age              = 40,
+  weakness         = factor("Yes", levels = common_levels$NoYes)
+)
+
+# Predicted probabilities with base R predict()
+pred_probs <- predict(mod.final, newdata = new_patients, type = "response")
+
+pred_tbl <- bind_cols(
+  Scenario = c(
+    "40F: GT Yes, Weakness Yes; others No",
+    "40M: GT Yes, Weakness Yes; others No"
+  ),
+  new_patients[, c("gender","age","genital_thrush","weakness",
+                   "polyuria","polydipsia","itching","irritability",
+                   "partial_paresis","polyphagia")],
+  tibble(Predicted_Probability = pred_probs)
+)
+
+gt(pred_tbl) %>%
+  fmt_number(columns = "Predicted_Probability", decimals = 3) %>%
+  tab_header(title = "Scenario Prediction by Gender (Logistic Regression)")
+```
+
+
+```{r}
+#| label: fig-scenario-two-patients-ggeffects
+#| fig-cap: "Predicted probability of early-stage diabetes by gender for age 40 with genital thrush present, based on the final logistic regression model."
+#| echo: false
+#| warning: false
+
+# Predict using ggeffects
+pred_resp <- predict_response(
+  model = mod.final,
+  terms = c(
+    "gender",
+    "age [40]",
+    "genital_thrush [Yes]"
+  )
+)
+
+plot(pred_resp)
+```
+
+**Scenario takeaway:** Holding all other symptoms constant (genital thrush and weakness present; others absent) at age 40, the model predicts a **lower probability** for the male than the female (@tbl-scenario-two-patients, @fig-scenario-two-patients-ggeffects), consistent with the protective association for males observed in the final model.
+
+## Limitations
+
+While the final logistic regression model demonstrated strong predictive performance and clinical interpretability, several limitations should be considered when interpreting the results:  
+
+- **Sample size and diversity:** The dataset contains $n = 520$ observations, which is adequate for model training but still limits representation of certain demographic groups and rare symptom combinations. This may affect the model’s generalizability to broader populations.  
+- **Self-reported symptoms:** Predictors such as polyuria, polydipsia, and irritability rely on self-reported data, which can introduce recall bias or misclassification.  
+- **Cross-sectional design:** The analysis is based on a single time-point per patient, preventing assessment of symptom changes or progression of diabetes risk over time.  
+- **Missing socioeconomic and demographic factors:** Variables such as **family income**, **race/ethnicity**, and **location of residence** were not available. These factors are known to influence health outcomes and could improve predictive accuracy and fairness if included.  
+- **Model scope:** Only demographic and symptom-based predictors were included; laboratory results (e.g., fasting glucose, HbA1c) and lifestyle factors were excluded, which could enhance model performance.  
+- **External validation:** The model has not yet been validated on an independent dataset. As such, reported performance metrics may be optimistic when applied to new, unseen populations.  
+
+**Summary:**  
+These limitations suggest that while the model is promising for early screening, further work is needed to validate it in larger and more diverse populations, incorporate socioeconomic and geographic factors, and confirm its robustness outside the development dataset.  
+
+## Conclusion
+
+This study set out to answer two primary research questions:  
+
+1. Can a logistic regression model using demographic and symptom-based predictors accurately predict the risk of early-stage diabetes in patients?  
+2. How would the model estimate diabetes risk for specific patient scenarios, such as two otherwise identical individuals differing only by gender?  
+
+The final model achieved high predictive performance—**Accuracy = 94.8%**, **Sensitivity = 93.0%**, **Specificity = 95.9%**, and **AUC = 0.983**—indicating excellent discrimination between diabetes-positive and diabetes-negative cases. Consistent with established clinical knowledge, **polydipsia** and **polyuria** emerged as the most influential predictors, followed by irritability, genital thrush, polyphagia, and partial paresis. Male gender, itching, and increasing age showed protective associations.
+
+Scenario-based predictions reinforced the model’s interpretability. When comparing two identical patients—both aged 40, with genital thrush and weakness, and all other symptoms absent—the model predicted a higher probability of early-stage diabetes for the female than for the male, consistent with the protective effect associated with male gender.
+
+These findings suggest that symptom-based logistic regression models can serve as effective decision-support tools for identifying patients at elevated risk, particularly when hallmark symptoms such as polyuria and polydipsia are present. However, as discussed in the **Limitations** section, additional demographic and socioeconomic factors, as well as broader data diversity, could further enhance model generalizability and clinical utility.
+
+Overall, the results demonstrate that relatively simple, interpretable models can yield strong predictive accuracy, offering both actionable insights for clinicians and a foundation for future predictive modeling work in diabetes risk assessment.
+
+## References
+
+Dua, D., & Graff, C. (2019). *UCI Machine Learning Repository: Early Stage Diabetes Risk Prediction Dataset*. University of California, Irvine. Retrieved from [https://archive.ics.uci.edu/](https://archive.ics.uci.edu/)
+
+Pagano, M., & Gauvreau, K. (2000). *Principles of Biostatistics* (2nd ed.). Harvard School of Public Health & Harvard Medical School.
+
+Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software, 4*(43), 1686. https://doi.org/10.21105/joss.01686
+
+Riswanto, U. (2025, April 20). *A Beginner’s Guide to Multivariate Logistic Regression in R*. Medium. Retrieved from [https://ujangriswanto08.medium.com/a-beginners-guide-to-multivariate-logistic-regression-in-r-9aa3b763f564](https://ujangriswanto08.medium.com/a-beginners-guide-to-multivariate-logistic-regression-in-r-9aa3b763f564)
+
+yuzaR Data Science. (2024, October 2). *Multivariable Logistic Regression in R: The Ultimate Masterclass (4K)!* [YouTube video]. Retrieved from [https://www.youtube.com/watch?v=EIR9zN0tDPw&t=420s](https://www.youtube.com/watch?v=EIR9zN0tDPw&t=420s)

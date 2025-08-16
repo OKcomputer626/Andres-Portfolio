@@ -1,0 +1,76 @@
+---
+title: "Projects"
+author: ""
+citation: false
+description: |
+  This is my projects section where I share applied statistics and data science work in R and Quarto.<br>
+  Each project includes reproducible code, clear methods, and practical insights.<br><br>
+  {{< fa envelope >}} Sign up for my [newsletter](/contact.html#buttondown) to receive updates about new projects.
+listing:
+- id: posts_2025
+  contents:
+    - Projects/2025
+  sort: "date desc"
+  categories: true
+  fields: [title, author, categories, date, image, subtitle]
+- id: posts_2024
+  contents:
+    - Projects/2024
+  sort: "date desc"
+  categories: true
+  fields: [title, author, categories, date, image, subtitle]
+toc: false
+date-format: "MMMM D, YYYY"
+comments: false
+format:
+  html:
+    page-layout: full
+title-block-banner: false
+
+header-includes: >
+  <link rel="stylesheet" href="../assets/listing-default.css">
+resources:
+  - ../assets/listing-default.css 
+---
+
+## 2025
+
+::: {#posts_2025}
+:::
+
+## 2024
+
+::: {#posts_2024}
+:::
+
+------------------------------------------------------------------------
+
+The blog post listing is based on the website source of [Andrew Heiss](https://www.andrewheiss.com/), who has put together an incredible listing template under CC-BY-SA 4.0 license. Thank you!
+
+
+<!-- title: "`Andres.log()`" -->
+<!-- author: "" -->
+<!-- title-block-banner: false -->
+<!-- page-layout: full -->
+<!-- description-meta: "Welcome to my blog, I’m thrilled to welcome you! Here, you will find a collection of articles on a wide variety of topics. Take a look around and let me know what you think!" -->
+
+<!-- listing: -->
+<!-- - id: posts_2025 -->
+<!--   contents: -->
+<!--     - Projects/2025 -->
+<!--   sort: "date desc" -->
+<!--   template: ../html/blog/listing.ejs -->
+<!--   categories: true -->
+<!-- - id: posts_2024 -->
+<!--   contents: -->
+<!--     - Projects/2024 -->
+<!--   sort: "date desc" -->
+<!--   template: ../html/blog/listing.ejs -->
+<!--   categories: true -->
+
+<!-- toc-title: Year -->
+<!-- toc-location: right -->
+<!-- date-format: "MMMM D, YYYY" -->
+<!-- image: "" -->
+<!-- code-tools: false -->
+<!-- comments: false -->
