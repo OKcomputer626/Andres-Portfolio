@@ -61,9 +61,6 @@ website:
         aria-label: "License Details"
         href: license.qmd
 
-execute:
-  freeze: auto
-
 format: 
   html: 
     theme: 
