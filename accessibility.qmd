@@ -8,7 +8,7 @@ You can return to the [home page](/) or the [about page](/about/).
 
 ## Feedback
 
-If you run into any accessibility issues on this site, please tell me using the [contact form](/contact.html).  
+If you run into any accessibility issues on this site, please tell me using the [contact form](/contact.qmd).  
 You can also open an issue in my site repo: <https://github.com/OKcomputer626/Andres-Portfolio/issues>.
 
 ## What I try to do
@@ -38,7 +38,7 @@ If you find a problem, please report it—I’ll prioritize a fix.
 
 ## Alternate formats
 
-If you need a post or figure in a different format (for example, a plain HTML page, an accessible PDF, or a transcript), [contact me](/contact.html) and I’ll do my best to provide it.
+If you need a post or figure in a different format (for example, a plain HTML page, an accessible PDF, or a transcript), [contact me](/contact.qmd) and I’ll do my best to provide it.
 
 ---
 
