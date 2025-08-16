@@ -25,7 +25,7 @@ about:
 listing: 
 - id: blog
   contents: 
-    - "../blog"
+    - "../blog/**/*.qmd"
   sort: date desc
   type: grid
   grid-columns: 1
@@ -79,9 +79,9 @@ I am Andres Gonzalez, a Data Scientist with a strong background in Applied Mathe
 My work focuses on applying statistical modeling, Bayesian methods, and machine learning to solve real-world problems, particularly in sports analytics, biostatistics, and predictive modeling.
 
 I have built and contributed to projects that combine rigorous statistical analysis with clear, compelling visualizations to generate actionable insights.  
-You can explore my [projects](/project) to see examples of my work, including Bayesian MCMC models, survival analysis, and machine learning applications.
+You can explore my [projects](/project/) to see examples of my work, including Bayesian MCMC models, survival analysis, and machine learning applications.
 
-Feel free to [connect with me](/contact.qmd) if you'd like to collaborate or discuss analytics and modeling ideas! {{< fa feather-pointed >}}
+Feel free to [connect with me](/contact/) if you'd like to collaborate or discuss analytics and modeling ideas! {{< fa feather-pointed >}}
 
 :::
 
@@ -121,21 +121,21 @@ Previously, I worked as a mathematics and statistics tutor — including for NCA
 #### Blog
 ::: {#blog}
 :::
-[See all &rarr;](../blog){.about-links .subtitle}
+[See all &rarr;](/blog/){.about-links .subtitle}
 :::
 
 ::: {.g-col-3}
 #### Visualization
 ::: {#visualization}
 :::
-[See all &rarr;](../visualization){.about-links .subtitle}
+[See all &rarr;](/visualization/){.about-links .subtitle}
 :::
 
 ::: {.g-col-3}
 #### Project
 ::: {#project}
 :::
-[See all &rarr;](../project){.about-links .subtitle}
+[See all &rarr;](/project/){.about-links .subtitle}
 :::
 
 ::::
