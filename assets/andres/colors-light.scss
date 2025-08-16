@@ -1,0 +1,30 @@
+/*-- scss:defaults --*/
+
+/* =====================
+   1) Brand palette (black foundation + icon color)
+   ===================== */
+$andres-primary:        #000000;   // solid black
+$andres-primary-light:  #1a1a1a;   // near-black
+$andres-secondary:      #000000;   // solid black
+$andres-secondary-light:#333333;   // dark gray for subtle contrast
+$andres-accent:         #e3e3e3;   // light gray accent
+$andres-accent-light:   #ffffff;   // white
+$andres-accent-dark:    #bfbfbf;   // medium gray accent
+$andres-icon-color:     #31125a;   // purple for icons
+$andres-bg-0:           #F0EFEB;   // page background
+$andres-bg-1:           #f5f5f5;   // alternate background
+$andres-bg-00:          rgba(0,0,0,.1); // semi-transparent black for shadows
+
+/* =====================
+   2) Export to site palette
+   ===================== */
+$spc-primary:           $andres-primary;
+$spc-primary-light:     $andres-primary-light;
+$spc-secondary:         $andres-secondary;
+$spc-secondary-light:   $andres-secondary-light;
+$spc-accent:            $andres-accent;
+$spc-accent-light:      $andres-accent-light;
+$spc-accent-dark:       $andres-accent-dark;
+$spc-bg-0:              $andres-bg-0;
+$spc-bg-1:              $andres-bg-1;
+$spc-bg-00:             $andres-bg-00;
