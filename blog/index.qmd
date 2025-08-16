@@ -1,44 +1,8 @@
 ---
-title: "`Andres.log()`"
-author: ""
-title-block-banner: false
-page-layout: full
-description-meta: "Welcome to my blog, I’m thrilled to welcome you! Here, you will find a collection of articles on a wide variety of topics. Take a look around and let me know what you think!"
-
-listing:
-  - id: posts_2025
-    contents:
-      - Projects/2025
-    sort: "date desc"
-    template: ../html/blog/listing.ejs
-    categories: true
-  - id: posts_2024
-    contents:
-      - Projects/2024
-    sort: "date desc"
-    template: ../html/blog/listing.ejs
-    categories: true
-    
-toc-title: Year
-toc-location: right
-date-format: "MMMM D, YYYY"
-image: ""
-code-tools: false
+title: "Blog"
 comments: false
+listing:
+  contents: []      # no posts yet; listing stays empty
 ---
 
-Welcome to `Andres.log()`! Here, I share my thoughts and projects on sports analytics, crime analysis, and my journey in data science. If you enjoy my content and want to stay updated, please enter your email address at the bottom of the page. Any feedback is appreciated, thanks!
-
-## 2025
-
-::: {#posts_2025}
-:::
-
-## 2024
-
-::: {#posts_2024}
-:::
-
-------------------------------------------------------------------------
-
-The blog post listing is based on the website source of [Andrew Heiss](https://www.andrewheiss.com/), who has put together an incredible listing template under CC-BY-SA 4.0 license. Thank you!
+Nothing here yet—posts coming soon.
