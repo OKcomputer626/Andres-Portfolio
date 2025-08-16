@@ -1,50 +1,82 @@
-# options specified here will apply to all posts in this folder
-
-# freeze computational output
-# (see https://quarto.org/docs/projects/code-execution.html#freeze)
-freeze: true
-description-meta: "{{< meta description >}}"
+# Freeze computed outputs
+execute: 
+  freeze: true
 
 # Enable banner style title blocks
-title-block-banner: "#201E43"
+title-block-banner: true
 
-format:   
-  html:
-    toc: true
-    toc-depth: 5
-    code-link: true
-    code-fold: true
-    code-summary: "Show code"
-    code-tools: true
-    toc-title: Contents
-    toc-location: left
-    comments:
-      giscus:
-        repo: OKcomputer626/Andres-Portfolio
-        category: Visualization comments
-        category-id: DIC_kwDOMYVHXM4ClYQD
-        mapping: pathname
-        loading: lazy
-        input-position: bottom
-        language: en
-    quarto-template-params:
-      banner-header-class: "blog-post"
-    include-after-body: ../html/blog_footer.html
-    fig-cap-location: bottom
+# Default fields for citation
+citation: true
+appendix-cite-as: display
 
-# Default knitr options
-execute: 
-  freeze: true                                                  
-  error: false
-  message: false
-  warning: false
-  eval: true
-  
+# TOC defaults
+toc: true
+toc-title: Contents
+toc-location: left
+toc-depth: 5   # <-- Added this line
 
-    
-# Default author
+# Wrap overflow code
+format: 
+  html: 
+    code-overflow: wrap
+    template-partials: 
+      - ../_partials/title-block-link-buttons/title-block.html
+
+# default author
 author:
   - name: Andres Gonzalez
     url: https://www.andresgonzalezstats.com
     degrees:
-    - MSc
+      - MSc
+
+
+# # options specified here will apply to all posts in this folder
+# 
+# # freeze computational output
+# # (see https://quarto.org/docs/projects/code-execution.html#freeze)
+# freeze: true
+# description-meta: "{{< meta description >}}"
+# 
+# # Enable banner style title blocks
+# title-block-banner: "#201E43"
+# 
+# format:   
+#   html:
+#     toc: true
+#     toc-depth: 5
+#     code-link: true
+#     code-fold: true
+#     code-summary: "Show code"
+#     code-tools: true
+#     toc-title: Contents
+#     toc-location: left
+#     comments:
+#       giscus:
+#         repo: OKcomputer626/Andres-Portfolio
+#         category: Visualization comments
+#         category-id: DIC_kwDOMYVHXM4ClYQD
+#         mapping: pathname
+#         loading: lazy
+#         input-position: bottom
+#         language: en
+#     quarto-template-params:
+#       banner-header-class: "blog-post"
+#     include-after-body: ../html/blog_footer.html
+#     fig-cap-location: bottom
+# 
+# # Default knitr options
+# execute: 
+#   freeze: true                                                  
+#   error: false
+#   message: false
+#   warning: false
+#   eval: true
+#   
+# 
+#     
+# # Default author
+# author:
+#   - name: Andres Gonzalez
+#     url: https://www.andresgonzalezstats.com
+#     degrees:
+#     - MSc

@@ -26,6 +26,7 @@ editor:
 
 # Load necessary packages using pacman for easier dependency management
 pacman::p_load(
+  glue,
   tidyverse,   # Collection of R packages for data science (ggplot2, dplyr, etc.)
   showtext,    # Enables custom fonts for ggplot2
   ggtext,      # Adds rich text formatting to ggplot2
