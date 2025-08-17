@@ -1,11 +1,18 @@
 project: 
   type: website
+  preview:
+    port: 3434
+    browser: true
+    watch-inputs: true
+    timeout: 3600
   
 website: 
   title: "Andres Gonzalez"
   site-url: "https://andresgonzalezstats.com/"
   description: "Insights and projects in data analysis, biostatistics, and applied statistics."
   favicon: img/icon.png
+  open-graph:
+    locale: en_EN
   page-navigation: true
   back-to-top-navigation: true
   twitter-card:
