@@ -5,7 +5,7 @@ citation: false
 description: |
   This is my projects section where I share applied statistics and data science work in R and Quarto.<br>
   Each project includes reproducible code, clear methods, and practical insights.<br><br>
-  {{< fa envelope >}} Sign up for my [newsletter](/contact.html#buttondown) to receive updates about new projects.
+  {{< fa envelope >}} Sign up for my [newsletter](/contact/) to receive updates about new projects.
 listing:
 - id: posts_2025
   contents:

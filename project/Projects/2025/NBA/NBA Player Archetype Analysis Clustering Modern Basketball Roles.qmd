@@ -4,6 +4,7 @@ subtitle: "Identifies five data-driven NBA player archetypes using PCA and K-Mea
 number-sections: false
 date: June 27, 2025
 image: featured.jpg
+featured-image: featured.jpg
 categories: 
   - R
   - Classification 

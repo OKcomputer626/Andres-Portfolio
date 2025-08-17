@@ -5,7 +5,7 @@ website:
   title: "Andres Gonzalez"
   site-url: "https://andresgonzalezstats.com/"
   description: "Insights and projects in data analysis, biostatistics, and applied statistics."
-  favicon: img/favicon.ico
+  favicon: img/icon.png
   page-navigation: true
   back-to-top-navigation: true
   twitter-card:
@@ -20,26 +20,27 @@ website:
       issue-term: pathname
       
   navbar:
-    logo: img/data.png
+    logo: img/icon.png
     tools:
-    - icon: github
-    href: https://github.com/OKcomputer626
+      - icon: github
+        href: https://github.com/OKcomputer626
+        aria-label: "GitHub"
     right: 
       - text: About
         aria-label: "About Me"
-        href: about/index.qmd
+        href: /about/
       - text: Blog
         aria-label: "Read blog posts"
-        href: blog/index.qmd
+        href: /blog/
       - text: Visualization
         aria-label: "Data visualization projects"
-        href: visualization/index.qmd
+        href: /visualization/
       - text: Projects
         aria-label: "Project Portfolio"
-        href: project/index.qmd
+        href: /project/
       - text: Spotify
         aria-label: "My Spotify"
-        href: Spotify/index.qmd
+        href: /spotify/
         
   page-footer: 
     left: >-
@@ -53,13 +54,13 @@ website:
     right: 
       - text: "Accessibility"
         aria-label: "Accessibility Commitment"
-        href: accessibility.qmd
+        href: /accessibility/
       - text: "Contact"
         aria-label: "Contact Form"
-        href: contact.qmd
+        href: /contact/
       - text: "License"
         aria-label: "License Details"
-        href: license.qmd
+        href: /license/
 
 execute:
   freeze: auto
@@ -84,8 +85,4 @@ format:
     lightbox: true
 
 include-in-header: assets/andres/umami.html
-  
-      
-   
-
     

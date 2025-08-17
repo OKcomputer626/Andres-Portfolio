@@ -5,6 +5,7 @@ description: ""
 number-sections: false
 date: July 23, 2025
 image: featured.jpg
+featured-image: featured.jpg
 categories: 
   - R
   - Biostatistics 

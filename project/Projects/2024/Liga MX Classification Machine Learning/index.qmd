@@ -9,6 +9,7 @@ categories:
   - Machine Learning
   - Football
 image: featured.jpg
+featured-image: featured.jpg
 draft: false
 number-sections: false
 format:

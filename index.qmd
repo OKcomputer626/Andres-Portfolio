@@ -18,8 +18,8 @@ about:
   links:
     - text: "{{< fa universal-access >}}"
       aria-label: "Accessibility statement"
-      href: accessibility.qmd
-    - text: "{{< fa brands bluesky >}}"
+      href: /accessibility/
+    - icon: bluesky
       aria-label: "Bluesky"
       href: https://bsky.app/profile/andresanalytics.bsky.social
     - icon: linkedin

@@ -4,6 +4,7 @@ subtitle: "This analysis uses multivariate logistic regression to identify and q
 description: ""
 slug: early-stage-diabetes-logit
 image: featured.jpg
+featured-image: featured.jpg
 number-sections: false
 date: August 8, 2025
 categories: 

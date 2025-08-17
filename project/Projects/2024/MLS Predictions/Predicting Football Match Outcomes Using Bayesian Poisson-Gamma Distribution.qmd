@@ -10,6 +10,7 @@ categories:
 draft: false
 number-sections: false
 image: featured.jpg
+featured-image: featured.jpg
 format:
   html:
     fig-cap-location: bottom

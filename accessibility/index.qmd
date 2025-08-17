@@ -1,0 +1,45 @@
+---
+title: "Accessibility Commitment"
+date: 2025-08-15
+comments: false
+---
+
+You can return to the [home page](/) or the [about page](/about/).
+
+## Feedback
+
+If you run into any accessibility issues on this site, please tell me using the [contact form](/contact/).  
+You can also open an issue in my site repo: <https://github.com/OKcomputer626/Andres-Portfolio/issues>.
+
+## What I try to do
+
+- Use clear headings and simple language.
+- Keep color contrast readable.
+- Add alt text to informative images; mark purely decorative images with empty alt text.
+- Make everything usable with a keyboard and show a visible focus outline.
+- Use clear link text (not “click here”).
+- Add captions or transcripts for audio/video when used.
+- Make data tables understandable with headers and brief notes.
+- Avoid motion or auto-play that could be distracting.
+
+## What might still need work
+
+- Some older posts may be missing full alt text or short chart descriptions.
+- Third-party embeds (e.g., iframes) may not be fully keyboard-friendly.
+- Code blocks on small screens can be tricky to navigate.
+
+If you find a problem, please report it—I’ll prioritize a fix.
+
+## How I check
+
+- I test pages with only the keyboard.
+- I run quick automated checks (e.g., Lighthouse or WAVE).
+- I review new pages for headings, contrast, alt text, and link clarity.
+
+## Alternate formats
+
+If you need a post or figure in a different format (for example, a plain HTML page, an accessible PDF, or a transcript), [contact me](/contact/) and I’ll do my best to provide it.
+
+---
+
+_Last reviewed: 2025-08-15._
