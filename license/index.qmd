@@ -1,16 +1,13 @@
 ---
-title: "License"
-date: 2025-08-15
-comments: false
+title: "CC BY-NC-SA 4.0 License"
 ---
 
-My [blog posts](/blog/) are released under a
-[Creative Commons Attribution–ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
+&#169; 2025 Andres Gonzalez
 
-<div class="text-center" aria-hidden="true">
-  {{< fa brands creative-commons size=2xl >}}
-  {{< fa brands creative-commons-by size=2xl >}}
-  {{< fa brands creative-commons-sa size=2xl >}}
-</div>
+Opinions expressed are solely my own and do not express the views of my employer or any organizations I am associated with.
 
-<span class="visually-hidden">Licensed under CC BY-SA 4.0</span>
+My content is released under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA) License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+{{< fa brands creative-commons size=2x >}} {{< fa brands creative-commons-by size=2x >}} {{< fa brands creative-commons-nc size=2x >}} {{< fa brands creative-commons-sa size=2x >}}
+
+In short, you may share and adapt this content with appropriate credit and notation of any changes. You may not use this material for any commercial purposes.

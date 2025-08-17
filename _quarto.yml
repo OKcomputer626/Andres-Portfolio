@@ -35,19 +35,19 @@ website:
     right: 
       - text: About
         aria-label: "About Me"
-        href: /about/
+        href: about/index.qmd
       - text: Blog
         aria-label: "Read blog posts"
-        href: /blog/
+        href: blog/index.qmd
       - text: Visualization
         aria-label: "Data visualization projects"
-        href: /visualization/
+        href: visualization/index.qmd
       - text: Projects
         aria-label: "Project Portfolio"
-        href: /project/
+        href: project/index.qmd
       - text: Spotify
         aria-label: "My Spotify"
-        href: /spotify/
+        href: spotify/index.qmd
         
   page-footer: 
     left: >-
@@ -61,13 +61,13 @@ website:
     right: 
       - text: "Accessibility"
         aria-label: "Accessibility Commitment"
-        href: /accessibility/
+        href: accessibility/index.qmd
       - text: "Contact"
         aria-label: "Contact Form"
-        href: /contact/
+        href: contact/index.qmd
       - text: "License"
         aria-label: "License Details"
-        href: /license/
+        href: license/index.qmd
 
 execute:
   freeze: auto
