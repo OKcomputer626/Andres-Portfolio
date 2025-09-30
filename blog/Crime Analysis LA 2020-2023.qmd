@@ -1,6 +1,9 @@
 ---
 title: "Crime"
 editor: visual
+execute: 
+  echo: false
+  warning: false
 ---
 
 ```{r}
@@ -14,6 +17,7 @@ library(ggtext)
 library(scales)
 library(ggTimeSeries)
 library(ggh4x)
+library(ggridges)
 ```
 
 ```{r}
@@ -402,6 +406,69 @@ dow_area %>%
     plot.margin = margin(5, 5, 5, 5)
   )
 ```
+
+```{r}
+time_crime_area <- crime %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN",
+         year == 2023,
+         area_name %in% names) %>%
+  mutate(
+    time_occ_fixed = str_pad(time_occ, 4, pad = "0"),
+    time_occ_fixed = paste0(
+      substr(time_occ_fixed, 1, 2), ":",
+      substr(time_occ_fixed, 3, 4)
+    ),
+    time_occ_fixed = as.POSIXct(
+      strptime(time_occ_fixed, format = "%H:%M"),
+      tz = "America/Los_Angeles"
+    )
+  ) %>%
+  group_by(area_name, time_occ_fixed) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup()
+
+time_crime_area %>%
+  ggplot(aes(x = time_occ_fixed, y = area_name)) +
+  geom_density_ridges2(color = "#FFFFFF", fill = "#1F51FF") +
+  scale_x_datetime(
+    expand = c(0, 0),
+    breaks = as.POSIXct(strptime(
+      c(
+        "0:00",
+        "3:00",
+        "6:00",
+        "9:00",
+        "12:00",
+        "15:00",
+        "18:00",
+        "21:00",
+        "23:59"
+      ),
+      format = "%H:%M"
+    ), tz = "America/Los_Angeles"),
+    date_labels = "%I %p"
+  ) +
+  labs(
+    title = "",
+    subtitle = "",
+    caption = cap,
+    x = "Time of Day (Pacific Time)",
+    y = NULL
+  ) +
+  theme_minimal(base_family = "Oswald", base_size = 7) +
+  theme(
+    plot.title = element_text(size = 16),
+    plot.title.position = "plot",
+    plot.subtitle = element_textbox(size = 6),
+    plot.caption = element_textbox(family = "Serif", hjust = 0, color = "grey45", size = 4.5),
+    plot.caption.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid = element_blank()
+  )
+  
+```
+
 
 ```{r}
 daily <- crime %>%
