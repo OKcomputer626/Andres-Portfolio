@@ -1,0 +1,1015 @@
+---
+title: "How Crime in Los Angeles Changed from 2020 to 2023"
+subtitle: "A four-year look at how crime in Los Angeles fell during the pandemic, rebounded in 2022, and stabilized through 2023."
+description: ""
+categories:
+  - LA Crime Trends
+  - Vehicle Theft
+  - Crime Patterns & Behavior
+  - Public Safety Insights
+  - Data & Visualization
+date: October 5, 2025
+slug: la-crime-trends-2020-2023
+image: featured.jpg
+featured-image: featured.jpg
+execute: 
+  echo: false
+  warning: false
+format:
+  html:
+    fig-cap-location: bottom
+    lightbox: true      # moved here so Quarto reliably picks it up
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+```{r}
+library(tidyverse)
+library(showtext)
+library(lubridate)
+library(janitor)
+library(skimr)
+library(glue)
+library(ggtext)
+library(scales)
+library(ggTimeSeries)
+library(ggh4x)
+library(ggridges)
+library(sf)
+```
+
+```{r}
+# Add Google fonts
+font_add_google("Oswald", family = "Oswald")
+font_add_google("PT Serif", family = "Serif")
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+```{r}
+# Generate a social media caption with custom colors and font styling
+social <- andresutils::social_caption(font_family = "Serif", icon_color = "#1F51FF", font_color = "grey45") 
+
+# Construct the final plot caption with TidyTuesday details, data source, and social caption
+cap <- paste0(
+  "**Source**:  Los Angeles Police Department (LAPD) | **Graphic**: ", social
+)
+```
+
+```{r}
+# crime_raw <- read_csv("Data/crime_2025.csv") %>%
+#   clean_names()
+# 
+# crime <- crime_raw %>%
+#   mutate(
+#     date = ymd_hms(date_occ),
+#     year = year(date),
+#     month = month(date),
+#     day = day(date),
+#     dow = wday(date, label = TRUE)
+#   ) %>%
+#   filter(
+#     year %in% c(2020:2023))
+# 
+# skim(crime)
+# 
+# crime <- crime %>%
+#   mutate(
+#     vict_age = if_else(vict_age == 0, NA, vict_age)
+#   ) %>%
+#   select(
+#     dr_no, date, year, month, dow, time_occ, area_name, crm_cd, crm_cd_desc, vict_age, vict_sex, vict_descent, premis_cd, premis_desc)
+# 
+# write_rds(crime, "Data/crime_2020_2023.rds")
+```
+
+```{r}
+crime <- read_rds(here::here("Data/crime_2020_2023.rds"))
+```
+
+## Los Angeles crime trends, 2020–2023
+
+Crime in Los Angeles has shifted notably over the past four years — falling during the height of the COVID-19 pandemic, then rising as the city reopened and activity resumed.  
+
+According to official data from the [**Los Angeles Police Department (LAPD) Open Data Portal**](https://data.lacity.org/A-Safe-City/Crime-Data-from-2020-to-Present/2nrs-mtv8), monthly reported incidents reached a **four-year low in early 2021** before peaking in **mid-2022** and stabilizing at roughly **20,000 incidents per month** through the end of 2023.  
+
+```{r}
+df <- crime %>%
+  mutate(month = floor_date(as.Date(date), "month")) %>%  # ensure Date
+  count(month, name = "n")
+
+# Breaks every 3 months across the data range
+brks <- seq(
+  floor_date(min(df$month), "quarter"),
+  ceiling_date(max(df$month), "quarter"),
+  by = "3 months"
+)
+
+# Labels: show "Mon\nYear" only for Januaries; otherwise just "Mon"
+lab_fun <- function(x) {
+  ifelse(month(x) == 1, paste0(format(x, "%b"), "\n", format(x, "%Y")),
+         format(x, "%b"))
+}
+
+high_point <- df %>%
+  slice_max(n, n = 1, with_ties = FALSE)
+
+low_point <- df %>%
+  slice_min(n, n = 1, with_ties = FALSE)
+
+point <- df %>%
+  arrange(desc(month)) %>%
+  slice(3)
+
+# Compact formatter
+compact_fmt <- label_number(
+  accuracy = 0.1,                     # 1 decimal place
+  scale_cut = cut_short_scale()       # K, M, B suffix
+)
+
+# Build highlight list
+highlight <- bind_rows(
+  mutate(
+    high_point,
+    label = paste0(
+      format(month, "%b '%y"),
+      "<br><span style='color:#1F51FF; font-size:8pt;'>",
+      compact_fmt(n),
+      "</span>"
+    )
+  ),
+  mutate(
+    low_point,
+    label = paste0(
+      format(month, "%b '%y"),
+      "<br><span style='color:#1F51FF; font-size:8pt;'>",
+      compact_fmt(n),
+      "</span>"
+    )
+  ),
+  mutate(
+    point,
+    label = paste0(
+      format(month, "%b '%y"),
+      "<br><span style='color:#1F51FF; font-size:8pt;'>",
+      compact_fmt(n),
+      "</span>"
+    )
+  )
+)
+
+y_max <- max(df$n, na.rm = TRUE)
+
+df %>%
+  ggplot(aes(x = month, y = n)) +
+  geom_line(linewidth = 0.8, color = "#1F51FF") +
+  geom_area(fill = "#1F51FF", alpha = 0.1) +
+  geom_point(
+    data = highlight,
+    aes(x = month, y = n),
+    shape = 23,
+    color = "#1F51FF",
+    fill = "#FFFFFF",
+    size = 2.2,
+    stroke = 0.8
+  ) +
+  geom_richtext(
+    data = highlight,
+    aes(x = month, y = n, label = label),
+    vjust = -0.3,
+    hjust = 0.5,
+    color = "grey25",
+    family = "Serif",
+    fill = NA,
+    # no background box
+    label.color = NA,
+    # no border
+    size = 2.2
+  ) +
+  annotate(
+    "text",
+    x = as.Date("2020-03-15"),
+    y = y_max * 0.60,
+    label = "COVID-19\nRecession",
+    family = "Serif",
+    color = "#680b42",
+    lineheight = 1.05,
+    size = 2,
+    hjust = 0,
+    vjust = 2
+  ) +
+  annotate(
+    "curve",
+    x = as.Date("2020-04-15"),
+    y = y_max * 0.57,
+    xend = as.Date("2020-04-01"),
+    yend = y_max * 0.75,
+    curvature = -0.25,
+    linetype = "dashed",
+    linewidth = 0.5,
+    colour = "#680b42",
+    arrow = arrow(type = "closed", length = unit(0.08, "in"))
+  ) +
+  # Violent Crime Wave annotation
+  annotate(
+    "text",
+    x = as.Date("2022-03-01"),
+    # left of the spike
+    y = y_max * 0.62,
+    # vertical placement
+    label = "Violent crime\npeak in 2022",
+    family = "Serif",
+    color = "#680b42",
+    lineheight = 1.05,
+    size = 2
+  ) +
+  annotate(
+    "curve",
+    x = as.Date("2022-03-01"),
+    y = y_max * 0.7,
+    # start near text
+    xend = as.Date("2022-04-01"),
+    yend = y_max * 0.95,
+    # point to spike
+    curvature = -0.2,
+    linetype = "dashed",
+    colour = "#680b42",
+    arrow = arrow(type = "closed", length = unit(0.08, "in"))
+  ) +
+  labs(
+    title = "Los Angeles Crime Hit a Low in 2021 Before Peaking in 2022 and Leveling Off",
+    subtitle = "**Monthly Reported Incidents** [LAPD Data, Jan 2020 – Dec 2023]",
+    x = NULL,
+    y = "Incidents",
+    caption = cap
+  ) +
+  scale_x_date(breaks = brks,
+               labels = lab_fun,
+               expand = c(0.01, 0.01)) +
+  scale_y_continuous(labels = scales::comma, limits = c(0, 25000)) +
+  theme_minimal(base_family = "Serif", base_size = 7) +
+  theme(
+    plot.title = element_textbox_simple(
+      family = "Oswald",
+      face = "bold",
+      size = 14
+    ),
+    plot.subtitle = element_markdown(size = 6, margin = margin(t = 5)),
+    plot.caption = element_textbox(
+      size = 4.5,
+      color = "grey45",
+      hjust = 0,
+      margin = margin(t = 10)
+    ),
+    plot.caption.position = "plot",
+    plot.title.position = "plot",
+    axis.text.x = element_text(lineheight = 1.2),
+    panel.grid = element_blank(),
+    axis.ticks = element_line(color = "grey10", size = .3),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB")
+  )
+```
+
+### The pandemic dip
+
+During the height of the **COVID-19 recession**, citywide activity slowed to a crawl. 
+
+With fewer cars on the road and nightlife shut down, Los Angeles logged roughly **15.4 K incidents in February 2021**, the lowest monthly total in recent history.
+
+That low point reflected the unusual conditions of lockdown life — not necessarily a long-term drop in crime, but a pause caused by reduced movement and opportunity.
+
+### The rebound and plateau
+
+Once restrictions eased in 2021, reported crime began to climb again.  
+
+By **May 2022**, incidents reached **20.5 K**, marking the city’s highest point in more than two years.  
+
+Since then, monthly totals have stayed near that mark, closing **October 2023** at **20.1 K incidents** — slightly below the 2022 peak but well above pandemic lows.  
+
+This plateau suggests Los Angeles may have reached a new post-pandemic baseline.
+
+### What might explain the shift?
+
+Several factors likely contributed:
+
+- **Mobility and nightlife returned** — more people outside means more interactions (and more opportunities for crime).  
+- **Economic pressure** — inflation and job instability often correlate with upticks in certain offenses.  
+- **Policing adjustments** — resource shifts during and after the pandemic may have influenced reporting and enforcement patterns.
+
+Still, the city’s overall trend is **stable**, not sharply rising — the 2022 jump looks more like a correction than a new surge.
+
+---
+
+## Vehicle theft leads all reported crimes in L.A.
+
+Over the past four years, **vehicle theft** has emerged as Los Angeles’ most reported crime — far surpassing every other offense.  
+
+According to LAPD data from 2020 through 2023, stolen vehicles accounted for **more than 93,000 cases**, nearly **25,000 higher** than the next most common category: **simple assault**.
+
+```{r fig.height=4.5, fig.width=9}
+top_10 <- crime %>%
+  count(crm_cd_desc, name = "crimes") %>%
+  arrange(desc(crimes)) %>%
+  mutate(
+    maxvalue = max(crimes) * 1.05,
+    crm_cd_desc = str_to_title(crm_cd_desc)
+  ) %>%
+  slice(1:10)
+
+# get top and 2nd to compute the gap
+top_row  <- top_10 %>% slice_max(crimes, n = 1)
+second   <- top_10 %>% slice_max(crimes, n = 2) %>% slice_tail(n = 1)
+gap_lab  <- label_number(scale_cut = cut_short_scale(), accuracy = 0.1)(top_row$crimes - second$crimes)
+
+annot_text <- glue(
+  "<b><span style='color:#1F51FF'>Vehicle theft</span></b> is nearly
+           <span style='color:#1F51FF'>25K</span> cases higher<br>
+           than the <span style='color:grey60'>next most common crime</span>"
+)
+
+top_10 %>%
+  mutate(is_max = crimes == max(crimes)) %>%
+  ggplot(aes(
+    x = reorder(crm_cd_desc, crimes),
+    y = crimes,
+    fill = is_max
+  )) +
+  geom_col() +
+  geom_text(
+    aes(
+      y = maxvalue / 15,
+      label = label_number(scale_cut = cut_short_scale(), accuracy = 0.1)(crimes),
+      color = is_max
+    ),
+    size = 2,
+    family = "Oswald",
+    fontface = "bold"
+  ) +
+  coord_flip() +
+  scale_color_manual(values = c("TRUE" = "#FFFFFF", "FALSE" = "#000000")) +
+  scale_fill_manual(values = c("TRUE" = "#1F51FF", "FALSE" = "grey70")) +
+  scale_y_continuous(expand = c(0.02, 0.02)) +
+  annotate(
+    "richtext",
+    x = 5.5,
+    # "Vehicle - Stolen" after str_to_title()
+    y = top_row$crimes * 0.80,
+    # place slightly to the right of the bar
+    label = annot_text,
+    hjust = 0.5,
+    family = "Oswald",
+    size = 2.2,
+    fill = NA,
+    label.color = NA
+  ) +
+  annotate(
+    "segment",
+    x = 6.2,
+    # start at your textbox x
+    y = top_row$crimes * 0.80,
+    # start a bit below the textbox
+    xend = 9.3,
+    # end at the Vehicle - Stolen bar
+    yend = top_row$crimes * 0.75,
+    # just shy of the bar top
+    colour = "grey70",
+    linewidth = 0.6,
+    arrow = arrow(type = "closed", length = unit(0.18, "cm")),
+    lineend = "round"
+  ) +
+  labs(
+    title = "Most Common Crimes in Los Angeles",
+    subtitle = "**Stolen vehicles top L.A.’s 10 most reported crimes** [LAPD Data, Jan 2020 – Dec 2023]",
+    caption = cap,
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal(base_family = "Oswald", base_size = 7) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_markdown(
+      size = 6,
+      margin = margin(t = 2, b = 5),
+      family = "Serif"
+    ),
+    plot.caption = element_textbox(
+      family = "Serif",
+      size = 4.5,
+      color = "grey45",
+      hjust = 0,
+      margin = margin(t = 5)
+    ),
+    plot.caption.position = "plot",
+    axis.text.y = element_text(hjust = 1),
+    axis.text.x = element_blank(),
+    panel.grid = element_blank(),
+    plot.margin = margin(5, 5, 5, 5),
+    legend.position = "none",
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB")
+  )
+
+```
+
+Recent coverage from [KTLA News](https://ktla.com/news/california/vehicle-thefts-decrease-but-these-are-the-biggest-targets/) notes that vehicle thefts may be **starting to decline statewide**, but that specific models — especially **Kia and Hyundai vehicles** — remain the **biggest targets** for thieves.  
+
+That pattern mirrors what’s been observed locally in Los Angeles through 2023, even as total thefts begin to stabilize.
+
+### Why car theft remains elevated
+
+- **Targeted models:** According to KTLA, **Kia and Hyundai** vehicles without modern anti-theft systems have been disproportionately stolen across California.  
+- **Economic factors:** Higher used-car values during the pandemic made vehicle theft more lucrative.  
+- **Social trends:** Viral videos showing how to start certain cars without keys further amplified the issue.  
+- **Preventive action:** LAPD and local agencies have distributed free steering wheel locks and VIN etching programs to reduce risk.
+
+While the statewide numbers show early signs of decline, the long-term totals still place vehicle theft firmly at the top of L.A.’s crime list.
+
+---
+
+## When are cars stolen most often?
+
+### Fridays and Saturdays lead vehicle thefts in 2023
+
+Across Los Angeles, vehicle thefts don’t happen evenly throughout the week.  
+
+In 2023, LAPD data show clear late-week spikes — **Fridays and Saturdays** consistently ranked as the most common days for stolen vehicles across multiple divisions.
+
+```{r}
+names <- crime %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN",
+         year == 2023) %>%
+  group_by(area_name) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  slice(1:9) %>%
+  pull(area_name)
+
+dow_area <- crime %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN",
+         year == 2023,
+         area_name %in% names) %>%
+  group_by(dow, area_name) %>%
+  count(name = "avg") %>%
+  ungroup() %>%
+  group_by(area_name) %>%
+  mutate(is_max = avg == max(avg)) %>%
+  ungroup()
+
+dow_area %>%
+  ggplot(aes(x = dow, y = avg, fill = is_max)) +
+  geom_col() +
+  geom_text(
+    data = dow_area %>% filter(is_max == "TRUE"),
+    aes(label = avg),
+    family = "Oswald",
+    color = "#FFFFFF",
+    size = 1.8,
+    vjust = 1.4
+  ) +
+  facet_wrap2(vars(area_name), axes = "all") +
+  scale_fill_manual(values = c("TRUE" = "#1F51FF", "FALSE" = "grey70")) +
+  labs(
+    title = "When Are Cars Stolen Most Often in Los Angeles?",
+    subtitle = "**In 2023, vehicle thefts across LAPD divisions often peaked on Fridays and Saturdays.** [LAPD Data, Jan–Dec 2023]",
+    caption = cap,
+    x = NULL,
+    y = NULL
+  ) +
+  theme_minimal(base_family = "Oswald", base_size = 7) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_markdown(
+      family = "Serif",
+      size = 6,
+      margin = margin(t = 2, b = 5)
+    ),
+    plot.caption = element_textbox(
+      family = "Serif",
+      size = 4.5,
+      color = "grey45",
+      hjust = 0,
+      margin = margin(t = 10)
+    ),
+    plot.caption.position = "plot",
+    legend.position = "none",
+    panel.grid.major.x = element_blank(),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB")
+  )
+```
+
+### Division patterns
+
+While theft occurs daily, some divisions stood out:
+
+- **Newton Division** recorded the highest single-day peak, with **334 Saturday thefts**.  
+- **77th Street Division** saw **312 thefts** on Fridays.  
+- **Southwest and Southeast Divisions** both reported around **250 thefts** late in the week.  
+- **Central and Olympic Divisions** had smaller but steady weekend increases.  
+
+Overall, the pattern suggests more thefts as the week winds down — when cars are often parked longer in public or residential areas.
+
+### Why late-week thefts rise
+
+- **More activity:** Increased driving, nightlife, and weekend travel mean more vehicles left unattended in high-traffic areas.  
+- **Lower vigilance:** People are less likely to notice or report suspicious activity during social hours or overnight weekends.  
+- **Opportunity windows:** Thieves may take advantage of vehicles left parked for multiple days.  
+
+The trend doesn’t imply weekends are inherently unsafe — rather, it highlights how routine behavior shapes crime opportunity.
+
+---
+
+## What time of day do vehicle thefts happen?
+
+### Most vehicle thefts occur overnight and into the early morning hours
+
+Following the patterns of *when* and *where* cars are stolen, the next layer of timing looks at **hourly trends**.  
+
+Across Los Angeles, most vehicle thefts in 2023 occurred during the **late-night and early-morning hours**, when visibility is lower and vehicles often sit unattended.
+
+```{r}
+time_crime_area <- crime %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN",
+         year == 2023,
+         area_name %in% names) %>%
+  mutate(
+    time_occ_fixed = str_pad(time_occ, 4, pad = "0"),
+    time_occ_fixed = paste0(
+      substr(time_occ_fixed, 1, 2), ":",
+      substr(time_occ_fixed, 3, 4)
+    ),
+    time_occ_fixed = as.POSIXct(
+      strptime(time_occ_fixed, format = "%H:%M"),
+      tz = "America/Los_Angeles"
+    )
+  ) %>%
+  group_by(area_name, time_occ_fixed) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup()
+
+time_crime_area %>%
+  ggplot(aes(x = time_occ_fixed, y = area_name)) +
+  geom_density_ridges2(color = "#FFFFFF", fill = "#1F51FF") +
+  scale_x_datetime(
+    expand = c(0, 0),
+    breaks = as.POSIXct(strptime(
+      c(
+        "0:00",
+        "3:00",
+        "6:00",
+        "9:00",
+        "12:00",
+        "15:00",
+        "18:00",
+        "21:00",
+        "23:59"
+      ),
+      format = "%H:%M"
+    ), tz = "America/Los_Angeles"),
+    date_labels = "%I %p"
+  ) +
+  labs(
+    title = "When Do Vehicle Thefts Happen in Los Angeles?",
+    subtitle = "**Hourly patterns of reported incidents across LAPD divisions, 2023 (Pacific Time)** [LAPD Data, Jan–Dec 2023]",
+    caption = cap,
+    x = "Time of Day (Pacific Time)",
+    y = NULL
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_minimal(base_family = "Oswald", base_size = 7) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    plot.title.position = "plot",
+    plot.subtitle = element_textbox(size = 6, margin = margin(b = 10)),
+    plot.caption = element_textbox(
+      family = "Serif",
+      hjust = 0,
+      color = "grey45",
+      size = 4.5,
+      margin = margin(t = 10)
+    ),
+    plot.caption.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    axis.title.x = element_text(margin = margin(t = 10)),
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB")
+  )
+```
+
+### Overnight patterns across divisions
+
+Theft timing is surprisingly consistent across divisions:
+
+- **77th Street, Newton, and Southeast Divisions** all show sharp peaks between **midnight and 4 a.m.**  
+- **Pacific and Olympic Divisions** also follow the same overnight pattern, though with slightly more midday variation.  
+- **Central and Harbor Divisions** display broader curves, suggesting thefts occur more evenly throughout the day.  
+
+These overlapping shapes indicate that car thefts across Los Angeles tend to cluster **under low-light conditions** — likely reflecting both opportunity and reduced deterrence.
+
+---
+
+## How have thefts changed over time?
+
+### Vehicle thefts surged after the pandemic before stabilizing in 2023
+
+Over the past four years, Los Angeles has experienced a dramatic shift in vehicle theft trends.  
+Following a sharp decline during the **COVID-19 recession in 2020**, thefts **rose steadily through 2021 and peaked in 2022** before beginning to level off in 2023.
+
+```{r}
+daily <- crime %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN") %>%
+  mutate(date = as_date(date)) %>%
+  count(date, name = "incidents")
+
+dtMonthLabels <- daily %>%
+  mutate(
+    WeekOfYear  = 1 + as.integer(strftime(date, "%W")),
+    MonthOfYear = as.integer(strftime(date, "%m"))
+  ) %>%
+  group_by(MonthOfYear) %>%
+  summarise(meanWeekOfYear = mean(WeekOfYear), .groups = "drop") %>%
+  mutate(MonthOfYear = month.abb[MonthOfYear])
+
+p <- ggplot_calendar_heatmap(
+  dtDateValue = daily,
+  cDateColumnName = "date",
+  cValueColumnName = "incidents",
+  monthBorderSize = 1
+) +
+  scale_fill_gradient(
+    low = "#FFFFFF",
+    high = "#1F51FF",
+    guide = guide_colorbar(
+      direction = "horizontal",
+      barheight = unit(0.25, "cm"),
+      barwidth = unit(4, "cm"),
+      label.vjust = 0.5
+    )
+  ) +
+  labs(
+    title = "When Cars Go Missing: Los Angeles Vehicle Thefts",
+    subtitle = "**Daily incident counts visualized across four years** [LAPD Data, Jan 2020 – Dec 2023]",
+    caption = cap,
+    x = NULL,
+    y = NULL,
+    fill = NULL
+  ) +
+  facet_wrap(vars(Year),
+             ncol = 1,
+             axes = "all",
+             strip.position = "left") +
+  scale_x_continuous(
+    breaks   = dtMonthLabels$meanWeekOfYear,
+    labels   = dtMonthLabels$MonthOfYear,
+    expand   = c(0, 0),
+    position = "top"
+  ) +
+  theme_minimal(base_size = 7, base_family = "Serif") +
+  theme(
+    plot.title = element_text(
+      family = "Oswald",
+      face = "bold",
+      size = 14
+    ),
+    plot.subtitle = element_textbox(size = 6, margin = margin(b = 5)),
+    plot.caption = element_textbox(
+      hjust = 0,
+      size = 4.5,
+      color = "grey45",
+      margin = margin(t = 5)
+    ),
+    plot.caption.position = "plot",
+    legend.position = "bottom",
+    strip.placement = "outside",
+    strip.text = element_text(
+      size = 10,
+      family = "Oswald",
+      color = "grey75"
+    ),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    plot.title.position = "plot",
+    legend.ticks = element_blank(),
+    plot.margin = margin(5, 5, 5, 5),
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB")
+  ) 
+
+p %>%
+  ggsave(filename = "images/vehicle thefts calendar heatmap.png", dpi = 300, bg = "#F0EFEB")
+```
+
+![](images/vehicle%20thefts%20calendar%20heatmap.png)
+
+### Year-by-year overview
+
+- **2020:** Vehicle thefts dropped during the early pandemic months but began rising again by summer.  
+- **2021:** The city recorded consistent increases, likely linked to economic reopening and supply shortages in used cars.  
+- **2022:** The highest daily averages were observed, coinciding with a statewide spike in vehicle-related crime.  
+- **2023:** Theft counts remained high but stabilized, showing the first signs of plateauing since pre-pandemic lows.  
+
+While totals have not returned to early 2020 levels, recent statewide reports suggest **a gradual cooling** — possibly reflecting greater awareness, targeted enforcement, and improved anti-theft measures.
+
+### What’s driving the long-term trend?
+
+- **Economic conditions:** Vehicle values rose sharply after 2020, incentivizing theft.  
+- **Social shifts:** Stay-at-home periods reduced theft opportunity, but post-pandemic mobility reversed that trend.  
+- **Technology gaps:** Certain **Kia and Hyundai** models remained key theft targets, as seen in both LAPD data and state reports.  
+- **Preventive adaptation:** Local initiatives such as **steering wheel lock distributions** and VIN etching programs are beginning to show results.  
+
+Overall, Los Angeles continues to see elevated theft levels, but the pace of increase has finally slowed.
+
+---
+
+```{r}
+lapd_division <- st_read(
+  here::here("Data/LAPD Divisions/LAPD_Divisions.shp"),
+  quiet = TRUE
+) %>%
+  st_transform(4326)
+
+crime_norm <- crime %>%
+  mutate(area_name_norm = case_when(
+    area_name == "N Hollywood" ~ "NORTH HOLLYWOOD",
+    area_name == "West LA"     ~ "WEST LOS ANGELES",
+    area_name == "77th Street" ~ "77TH STREET",
+    TRUE ~ str_to_upper(area_name)
+  ))
+```
+
+## Where are cars stolen most often?
+
+### South Los Angeles remains the city’s car theft hotspot
+
+After examining **when** vehicle thefts occur, this post turns to **where** they happen most often.  
+
+According to 2023 LAPD data, just **four divisions in South Los Angeles** — **77th Street, Newton, Southwest, and Southeast** — accounted for **over 28% of all reported vehicle thefts citywide**.
+
+```{r}
+# 1) Aggregate vehicle thefts (2023)
+theft_area <- crime_norm %>%
+  filter(crm_cd_desc == "VEHICLE - STOLEN", year == 2023) %>%
+  count(area_name_norm, name = "vehicle_thefts")
+
+# 2) Join to polygons (sf) → LA theft map
+la_theft_map <- lapd_division %>%
+  left_join(theft_area, by = c("APREC" = "area_name_norm"))
+
+# 3) Prep: bounding box and total
+bb <- st_bbox(la_theft_map)
+city_total <- sum(la_theft_map$vehicle_thefts, na.rm = TRUE)
+
+# 4) Global rank & share (compute once on ALL divisions)
+rank_tbl <- la_theft_map %>%
+  st_drop_geometry() %>%
+  transmute(APREC, vehicle_thefts = coalesce(vehicle_thefts, 0)) %>%
+  arrange(desc(vehicle_thefts), APREC) %>%
+  mutate(
+    rank  = row_number(),
+    share = vehicle_thefts / sum(vehicle_thefts, na.rm = TRUE)
+  )
+
+# 5) TOP-4 (most thefts) — labels to the RIGHT
+top_4 <- la_theft_map %>%
+  arrange(desc(vehicle_thefts)) %>%
+  slice_head(n = 4)
+
+cent <- st_centroid(top_4) %>%
+  cbind(st_coordinates(.))  # adds X, Y columns
+
+x_pad_right <- 0.06
+cent$label_x <- bb["xmax"] + x_pad_right
+cent$label_y <- cent$Y
+
+# fine nudges (as requested)
+cent$label_y[cent$APREC == "SOUTHWEST"] <- cent$label_y[cent$APREC == "SOUTHWEST"] + 0.05
+cent$label_y[cent$APREC == "NEWTON"]    <- cent$label_y[cent$APREC == "NEWTON"]    + 0.015
+
+# attach global rank/share + final label text
+cent <- cent %>%
+  left_join(rank_tbl, by = "APREC", suffix = c("", "_rank")) %>%  # <-- add suffix
+  mutate(
+    lab = paste0(
+      "#", rank, "  ", APREC, "\n",
+      label_number(scale_cut = cut_short_scale(), accuracy = 0.1)(vehicle_thefts_rank),  # <-- use *_rank
+      " (", percent(share, accuracy = 0.1), ")"
+    )
+  )
+
+# 6) BOTTOM-2 (fewest thefts) — labels to the LEFT
+low_2 <- la_theft_map %>%
+  arrange(vehicle_thefts) %>%
+  slice_head(n = 2)
+
+low_cent <- st_centroid(low_2) %>%
+  cbind(st_coordinates(.))  # adds X, Y columns
+
+x_pad_left <- 0.06
+low_cent$label_x <- bb["xmin"] - x_pad_left
+low_cent$label_y <- low_cent$Y
+
+# attach global rank/share + final label text
+low_cent <- low_cent %>%
+  left_join(rank_tbl, by = "APREC", suffix = c("", "_rank")) %>%
+  mutate(
+    lab = paste0(
+      "#", rank, "  ", APREC, "\n",
+      label_number(scale_cut = cut_short_scale(), accuracy = 0.1)(vehicle_thefts_rank),
+      " (", percent(share, accuracy = 0.1), ")"
+    )
+  )
+
+# (optional) manual nudge examples for left labels if overlapping:
+# low_cent$label_y[low_cent$APREC == "PACIFIC"] <- low_cent$label_y[low_cent$APREC == "PACIFIC"] + 0.02
+
+# 7) Outline for #1 division
+top1 <- la_theft_map %>% slice_max(vehicle_thefts, n = 1)
+```
+
+```{r}
+note_x <- unique(cent$label_x)  # aligns exactly with the right labels
+note_y <- max(cent$label_y) + 0.15  # slightly above the top-most label; tweak as needed
+```
+
+```{r}
+p <- la_theft_map %>%
+  ggplot() +
+  geom_sf(aes(fill = vehicle_thefts),
+          color = "#F0EFEB",
+          linewidth = 0.25) +
+  geom_sf(
+    data = top1,
+    fill = NA,
+    color = "#d2a300",
+    linewidth = 0.6
+  ) +
+  # leader lines (to outside labels)
+  geom_segment(
+    data = cent,
+    aes(
+      x = X,
+      y = Y,
+      xend = label_x,
+      yend = label_y
+    ),
+    inherit.aes = FALSE,
+    linewidth = 0.3,
+    color = "#353935",
+    lineend = "round"
+  ) +
+  # outside labels (rank + count + share)
+  geom_text(
+    data = cent,
+    aes(x = label_x, y = label_y, label = lab),
+    inherit.aes = FALSE,
+    hjust = 0,
+    vjust = 0.5,
+    family = "Oswald",
+    fontface = "bold",
+    size = 1.8,
+    lineheight = 1,
+    color = "#353935"
+  ) +
+  geom_segment(
+    data = low_cent,
+    aes(x = X, y = Y, xend = label_x, yend = label_y),
+    inherit.aes = FALSE,
+    linewidth = 0.3, color = "grey40", lineend = "round"
+  ) +
+  geom_text(
+    data = low_cent,
+    aes(x = label_x, y = label_y, label = lab),
+    inherit.aes = FALSE,
+    hjust = 1, vjust = 0.5,                    # left side alignment
+    family = "Oswald", fontface = "bold", size = 1.8, lineheight = 1,
+    color = "grey40"
+  ) +
+  annotate(
+    "richtext",
+    x = note_x + 0.05,
+    y = note_y,
+    label = paste0(
+      "<b><span style='color:#002fd2'>Four LAPD divisions</span></b><br>",
+      "account for over <b>28%</b><br>",
+      "of citywide vehicle thefts:"
+    ),
+    family = "Oswald",
+    size = 2,
+    fill = NA,
+    label.color = NA,
+    lineheight = 1.2,
+    hjust = 0.5,  # aligns with your right labels
+    vjust = 0
+  ) +
+  annotate(
+    "segment",
+    x = note_x + 0.05,
+    # same horizontal position as text
+    xend = note_x + 0.05,
+    y = note_y,
+    # start just below the text
+    yend = note_y - 0.12,
+    # extend downward
+    colour = "#353935",
+    linewidth = 0.3,
+    arrow = arrow(length = unit(0.12, "cm")),
+    lineend = "round"
+  ) +
+  scale_fill_gradient(
+    low = "#d0daff", high = "#002fd2",
+    labels = label_number(scale_cut = cut_short_scale()),
+    na.value = "grey95",
+    name = "Reported Vehicle Thefts"
+  ) +
+  coord_sf(
+    clip = "off"
+  ) +
+  labs(title = "Where Cars Are Stolen Most in Los Angeles",
+       subtitle = "**Hotspots of reported vehicle thefts by LAPD division** [LAPD Data, Jan–Dec 2023]",
+       caption = cap) +
+  guides(fill = guide_colorbar(ticks.colour = NA, title = "Reported Vehicle Thefts")) +
+  theme_void(base_family = "Oswald", base_size = 7) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    plot.subtitle = element_textbox(
+      size = 6,
+      margin = margin(t = 5),
+      hjust = 0.5
+    ),
+    plot.caption = element_textbox(
+      family = "Serif",
+      size = 4.5,
+      color = "grey45",
+      hjust = 0.5
+    ),
+    legend.position = "top",
+    legend.key.width = unit(0.95, "cm"),
+    legend.key.height = unit(0.25, "cm"),
+    legend.direction = "horizontal",
+    legend.title.position = "top",
+    legend.margin = margin(0, 0, 0, 0),
+    legend.box.margin = margin(t = 10, b = -10),
+    legend.title = element_text(hjust = 0.5, face = "bold"),
+    panel.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.background = element_rect(fill = "#F0EFEB", color = "#F0EFEB"),
+    plot.margin = margin(5, 5, 5, 5)
+  )
+
+p %>%
+  ggsave(filename = "images/vehicle thefts lapd divisions.png", dpi = 300, bg = "#F0EFEB")
+```
+
+![](images/vehicle%20thefts%20lapd%20divisions.png)
+
+### Concentrated in South Los Angeles
+
+- **77th Street Division** led all areas with **2,100 thefts (8.4%)**, marking it as the city’s top hotspot.  
+- **Newton Division** followed with **1,900 thefts (7.6%)**, maintaining its reputation as one of L.A.’s most active regions for vehicle-related crimes.  
+- **Southwest (1,600 thefts, 6.5%)** and **Southeast (1,500 thefts, 6.1%)** rounded out the top four.  
+
+These divisions sit in a densely populated section of the city with high vehicle density, numerous parking corridors, and major freeway access — all conditions that elevate risk.
+
+### Context behind the geography
+
+- **Accessibility:** Quick freeway entry points can make it easier for stolen vehicles to leave an area undetected.  
+- **Vehicle exposure:** More street and apartment parking in these neighborhoods increases opportunity.  
+- **Economic and social patterns:** Concentrated economic activity and mixed land use contribute to higher vehicle turnover.  
+- **Preventive focus:** LAPD and community groups have responded with targeted patrols and awareness campaigns in high-theft corridors.  
+
+Despite these ongoing efforts, the southern divisions continue to drive much of L.A.’s vehicle theft total each year.
+
+## Looking ahead
+
+Future updates will track whether these same South L.A. divisions continue to dominate in 2024 and 2025 — or if theft patterns begin shifting north and west as prevention efforts take hold.
+
+---
+
+**Sources:**  
+
+- Los Angeles Police Department (LAPD) Open Data — [*Crime Data from 2020 to Present*](https://data.lacity.org/A-Safe-City/Crime-Data-from-2020-to-Present/2nrs-mtv8)  
+- [KTLA News — *Vehicle thefts decrease, but these are the biggest targets*](https://ktla.com/news/california/vehicle-thefts-decrease-but-these-are-the-biggest-targets/)  
+- [ABC7 — *Los Angeles homicides reach highest level in 15 years*](https://abc7.com/post/los-angeles-homicides-crime-report/12046605/)  
+
+**Graphics:** [@AndresAnalytics](https://bsky.app/profile/andresanalytics.bsky.social) · [GitHub: OKcomputer626](https://github.com/OKcomputer626)  
+
+::: callout-note
+**Data Note:** Analysis based on publicly available reports from the [Los Angeles Police Department (LAPD) Open Data Portal](https://data.lacity.org/A-Safe-City/Crime-Data-from-2020-to-Present/2nrs-mtv8); figures represent reported incidents and may be subject to reclassification or updates.
+:::
+
+---

@@ -1,8 +1,42 @@
 ---
-title: "Blog"
+title: "Data Stories"
+description: |
+  A collection of data stories, visual analyses, and R-based explorations — from crime trends in Los Angeles to Bayesian modeling and beyond.<br>
+  Each post blends statistical insight, clear visuals, and reproducible methods to make data-driven findings accessible and engaging.
 comments: false
+citation: false
+toc: false
+date-format: "MMMM D, YYYY"
+author: ""
+
 listing:
-  contents: []      # no posts yet; listing stays empty
+  - id: blog_2025
+    contents: blog_2025
+    sort: "date desc"
+    categories: true
+    fields: [title, subtitle, categories, date, image, author]
+    image-align: left
+# image-height: 10em
+# page-size: 5
+
+format: 
+  html: 
+    page-layout: full
+
+title-block-banner: false
+
+header-includes: |
+  <link rel="stylesheet" href="../assets/listing-default.css">
+
+resources:
+  - ../assets/listing-default.css
 ---
 
-Nothing here yet—posts coming soon.
+## 2025
+
+::: {#blog_2025}
+:::
+
+------------------------------------------------------------------------
+
+The blog post listing is based on the website source of [Andrew Heiss](https://www.andrewheiss.com/), who has put together an incredible listing template under CC-BY-SA 4.0 license. Thank you!
