@@ -2,7 +2,7 @@
 title: "Climate Events by Region (2008–2024)"
 description: "Visualizing the top four climate-related event types by region and year using ggplot2 streamgraphs."
 lightbox: true
-date: today
+date: August 7, 2025
 categories: [TidyTuesday, R Programming, Data Visualization, Climate]
 tags: [ggplot2, data-visualization, tidyverse]
 image: "tt_32_2025.png"
