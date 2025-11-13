@@ -223,7 +223,9 @@ p <- who_tb_data %>%
             family = "Roboto",
             vjust = 1.2, hjust = 1.2)
 
-p <- animate(p, height = 7, width = 7, units = "in", res = 300, renderer = magick_renderer(loop = FALSE))
+p <- animate(p, height = 7, width = 7, units = "in", res = 300, renderer = magick_renderer(loop = FALSE), duration = 15,
+  fps = 10,
+  end_pause = 36)
 
 p1 <- who_tb_data %>%
   ggplot(aes(x = e_inc_100k, y = e_mort_100k)) +
