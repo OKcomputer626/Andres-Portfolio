@@ -1,0 +1,351 @@
+---
+title: "Global Patterns in Tuberculosis Incidence and Mortality"
+description: "A visualization exploring how TB incidence and mortality vary across WHO regions, revealing unequal disease burdens around the world. Population size and regional differences highlight the complex dynamics behind global TB outcomes."
+lightbox: true
+date: November 12, 2025
+categories: [TidyTuesday, Global Health, Epidemiology, Data Visualization, R Programming]
+tags: [ggplot2, tidyverse, gganimate, public-health, who-data, data-visualization]
+image: "tt_45_2025.png"
+editor_options: 
+  chunk_output_type: inline
+---
+
+![Animated visualization showing TB incidence and mortality from 2000 to 2023 across WHO regions. Each frame displays a faceted scatterplot for a single year, with point size representing population and revealing major regional differences in disease burden over time.](tt_45_2025.gif){#fig-1}
+
+### <mark> **How This Graphic Was Made** </mark>
+
+#### 1. 📦 Load Packages & Setup
+
+```{r}
+#| label: load
+#| warning: false
+#| message: false
+#| results: hide
+
+
+# Load necessary packages using pacman for easier dependency management
+pacman::p_load(
+  tidyverse,   # Collection of R packages for data science (ggplot2, dplyr, etc.)
+  showtext,    # Enables custom fonts for ggplot2
+  ggtext,      # Adds rich text formatting to ggplot2
+  skimr,       # Provides summary statistics in a readable format
+  glue,
+  janitor,
+  gganimate,
+  ggrepel,
+  legendry
+)
+
+# Add Google fonts
+font_add_google("Oswald", family = "Oswald")
+font_add_google("Roboto Condensed", family = "Roboto")
+
+# Add local font
+font_add("Font Awesome 6 Brands", here::here("fonts/otfs/Font Awesome 6 Brands-Regular-400.otf"))
+
+# Automatically enable the use of showtext for all plots
+showtext_auto()
+
+# Set DPI for high-resolution text rendering
+showtext_opts(dpi = 300)
+```
+
+#### 2. 📖 Read in the Data
+
+```{r}
+#| label: read
+#| include: true
+#| eval: true
+#| warning: false
+
+# Load the TidyTuesday data
+tuesdata <- tidytuesdayR::tt_load(2025, week = 45)
+
+# Extract dataset and clean column names
+who_tb_data <- tuesdata$who_tb_data %>% clean_names()
+
+# Show the README for context
+tidytuesdayR::readme(tuesdata)
+
+# Drop the list to free memory
+rm(tuesdata)
+```
+
+#### 3. 🕵️ Examine the Data
+
+```{r}
+#| label: examine
+#| include: true
+#| eval: true
+#| results: hide
+#| warning: false
+
+glimpse(who_tb_data)
+skim(who_tb_data)
+```
+
+#### 4. 🤼 Wrangle Data
+
+```{r}
+#| label: wrangle
+#| warning: false
+
+who_tb_data %>%
+  filter(is.na(e_mort_100k))
+
+who_tb_data <- who_tb_data %>%
+  drop_na(e_mort_100k)
+
+highlighted_countries <- who_tb_data %>%
+  filter(year == max(year)) %>%
+  group_by(g_whoregion) %>%
+  slice_max(e_inc_100k, n = 5, with_ties = FALSE) %>%
+  ungroup() %>%
+  pull(country)
+```
+
+#### 5. 🔤 Text
+
+```{r}
+#| label: text
+#| include: true
+#| warning: false
+
+cap <- "Week 45, 2025 | Source: World Health Organization Global Tuberculosis Report | Graphic by Andres Gonzalez"
+```
+
+#### 6. 📊 Plot
+
+```{r}
+#| label: plot
+#| warning: false
+
+p <- who_tb_data %>%
+  ggplot(aes(x = e_inc_100k, y = e_mort_100k)) +
+  facet_wrap( ~ g_whoregion, scales = "free") +
+  geom_point(
+    data = ~ filter(., !country %in% highlighted_countries),
+    aes(
+      size = e_pop_num,
+      colour = g_whoregion,
+      fill = stage(g_whoregion, after_scale = alpha(colorspace::desaturate(fill, 0.4), 0.2))
+    ),
+    shape = 21,
+    stroke = 0.2
+  ) +
+  geom_point(
+    data = ~ filter(., country %in% highlighted_countries),
+    aes(size = e_pop_num, fill = g_whoregion),
+    shape = 21,
+    col = "white",
+    stroke = 0.15
+  ) +
+  geom_text_repel(
+    data = . %>% filter(country %in% highlighted_countries),
+    aes(label = country),
+    fill = alpha("grey92", 0.5),
+    segment.color = "grey52",
+    size = 1.5,
+    family = "Roboto",
+    fontface = "bold",
+    seed = 10,
+    point.padding = 0.25,
+    min.segment.length = 0,
+    segment.size = 0.25
+  ) +
+  scale_fill_manual(
+    values = c(
+      "#ef476f",
+      "#f78c6b",
+      "#ffd166",
+      "#06d6a0",
+      "#118ab2",
+      "#073b4c"
+    ),
+    aesthetics = c("fill", "col")
+  ) +
+  scale_size_area(
+    max_size = 20,
+    breaks = c(25, 100, 500, 1000) * 1e6,
+    labels = c("25M", "100M", "500M", "1B"),
+  guide = guide_circles(
+    override.aes = aes(colour = "grey45"),
+    title = "Population",
+    text_position = "ontop",
+    # style just this guide
+    theme = theme(
+      legend.title = element_text(hjust = 0.5),
+      legend.text  = element_text(vjust = -0.5, size = 4)
+    )
+  )
+) +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Global Tuberculosis Burden Across Regions",
+    subtitle = "Countries vary widely in how TB incidence translates into mortality, revealing unequal health outcomes across regions. Population size adds another layer, showing how the global burden falls unevenly around the world.",
+    caption = cap,
+    x = "Estimated TB Incidence per 100k",
+    y = "Estimated TB Mortality per 100k"
+  ) +
+  theme_minimal(base_size = 7, base_family = "Oswald") +
+  theme(
+    plot.title = element_text(
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5)
+    ),
+    plot.title.position = "plot",
+    plot.subtitle = element_textbox_simple(
+      family = "Roboto",
+      margin = margin(b = 7),
+      size = 8
+    ),
+    plot.caption = element_text(
+      color = "grey45",
+      size = 4.5,
+      hjust = 0,
+      halign = 0,
+      margin = margin(t = 7)
+    ),
+    plot.caption.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "grey95", color = "grey25"),
+    plot.background = element_rect(fill = "grey95"),
+    strip.text = element_text(size = 10),
+    legend.position = c(0.04, 0.92)
+  ) +
+    transition_states(year) +
+    geom_text(aes(label = scales::number(year, accuracy = 1, big.mark = ""), 
+                x = Inf, y = Inf), 
+            stat = "unique", color = "grey80", size = 5,
+            family = "Roboto",
+            vjust = 1.2, hjust = 1.2)
+
+p <- animate(p, height = 7, width = 7, units = "in", res = 300, renderer = magick_renderer(loop = FALSE))
+
+p1 <- who_tb_data %>%
+  ggplot(aes(x = e_inc_100k, y = e_mort_100k)) +
+  facet_wrap( ~ g_whoregion, scales = "free") +
+  geom_point(
+    data = ~ filter(., !country %in% highlighted_countries),
+    aes(
+      size = e_pop_num,
+      colour = g_whoregion,
+      fill = stage(g_whoregion, after_scale = alpha(colorspace::desaturate(fill, 0.4), 0.2))
+    ),
+    shape = 21,
+    stroke = 0.2
+  ) +
+  geom_point(
+    data = ~ filter(., country %in% highlighted_countries),
+    aes(size = e_pop_num, fill = g_whoregion),
+    shape = 21,
+    col = "white",
+    stroke = 0.15
+  ) +
+  geom_text_repel(
+    data = . %>% filter(country %in% highlighted_countries),
+    aes(label = country),
+    fill = alpha("grey92", 0.5),
+    segment.color = "grey52",
+    size = 1.5,
+    family = "Roboto",
+    fontface = "bold",
+    seed = 10,
+    point.padding = 0.25,
+    min.segment.length = 0,
+    segment.size = 0.25
+  ) +
+  scale_fill_manual(
+    values = c(
+      "#ef476f",
+      "#f78c6b",
+      "#ffd166",
+      "#06d6a0",
+      "#118ab2",
+      "#073b4c"
+    ),
+    aesthetics = c("fill", "col")
+  ) +
+  scale_size_area(
+    max_size = 20,
+    breaks = c(25, 100, 500, 1000) * 1e6,
+    labels = c("25M", "100M", "500M", "1B"),
+  guide = guide_circles(
+    override.aes = aes(colour = "grey45"),
+    title = "Population",
+    text_position = "ontop",
+    # style just this guide
+    theme = theme(
+      legend.title = element_text(hjust = 0.5),
+      legend.text  = element_text(vjust = -0.5, size = 4)
+    )
+  )
+) +
+  guides(fill = "none",
+         color = "none") +
+  labs(
+    title = "Global Tuberculosis Burden Across Regions",
+    subtitle = "Countries vary widely in how TB incidence translates into mortality, revealing unequal health outcomes across regions. Population size adds another layer, showing how the global burden falls unevenly around the world.",
+    caption = cap,
+    x = "Estimated TB Incidence per 100k",
+    y = "Estimated TB Mortality per 100k"
+  ) +
+  theme_minimal(base_size = 7, base_family = "Oswald") +
+  theme(
+    plot.title = element_text(
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5)
+    ),
+    plot.title.position = "plot",
+    plot.subtitle = element_textbox_simple(
+      family = "Roboto",
+      margin = margin(b = 7),
+      size = 8
+    ),
+    plot.caption = element_text(
+      color = "grey45",
+      size = 4.5,
+      hjust = 0,
+      halign = 0,
+      margin = margin(t = 7)
+    ),
+    plot.caption.position = "plot",
+    plot.margin = margin(5, 5, 5, 5),
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "grey95", color = "grey25"),
+    plot.background = element_rect(fill = "grey95"),
+    strip.text = element_text(size = 10),
+    legend.position = c(0.04, 0.92)
+  )
+```
+
+#### 7. 💾 Save
+
+```{r}
+#| label: save
+#| warning: false
+
+# Save Animation
+anim_save("tt_45_2025.gif", p)
+
+# Save the plot for TidyTuesday 2025, Week 45 with specified dimensions.
+andresutils::save_plot(p1, type = "tidytuesday", year = 2025, week = 45, width = 9, height = 9)
+```
+
+#### 8. 🚀 GitHub Repository
+
+::: {.callout-tip collapse="true"}
+##### Expand for GitHub Repo
+
+The complete code for this analysis is available in [`tt_45_2025.qmd`](https://github.com/OKcomputer626/Andres-Portfolio/blob/master/visualization/TidyTuesday/2025/tt_45_2025.qmd).
+
+For the full repository, [click here](https://github.com/OKcomputer626/Andres-Portfolio).
+:::
+
+
+
+
